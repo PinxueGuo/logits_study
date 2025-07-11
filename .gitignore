@@ -12,3 +12,7 @@ static/browser_history/*.gif
 # Virtual environments
 .venv
 venv/
+
+# results
+results/*
+cache/*
