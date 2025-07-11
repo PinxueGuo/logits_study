@@ -1,0 +1,100 @@
+{"query": "将12个相同的小球放入编号为1、2、3、4的盒子中，每个盒子中至少有一个小球的不同放法有多少种？", "answer": "165种", "level": 3}
+{"query": "已知 $x$ 的一次多项式 $D = \\begin{vmatrix} -1 & 0 & x & 1 \\ 1 & 1 & -1 & -1 \\ 1 & -1 & 1 & -1 \\ 1 & -1 & -1 & 1 \\end{vmatrix}$，求该多项式中一次项的系数。", "answer": "-4", "level": 3}
+{"query": "若xlog₂3=1，求3^x +3^{-x}的值。", "answer": "5/2", "level": 1}
+{"query": "若x，y满足约束条件\\begin{cases} 0 ≤ 2x + y ≤ 6 \\ 3 ≤ x - y ≤ 6 \\end{cases}，求z = x - 2y的最大值。", "answer": "10", "level": 2}
+{"query": "我国古代数学名著《九章算术》对立体几何有深入的研究。堑堵指的是底面为直角三角形且侧棱垂直于底面的三棱柱；阳马指底面为矩形且有一侧棱垂直于底面的四棱锥。现有一堑堵（三棱柱ABC-A₁B₁C₁），其中AC⊥BC，已知AA₁=AB=2，求阳马B-A₁ACC₁的体积的最大值。", "answer": "4/3", "level": 5}
+{"query": "已知11个连续奇数的和为1991，按顺序排列这些数，第六个数是多少？", "answer": "\b\\boxed{181}", "level": 1}
+{"query": "$$-4\\frac{1}{3}-4\\frac{3}{4}+2\\frac{1}{3}+\\left( -3\\frac{1}{4} \\right)$$", "answer": "-10", "level": 4}
+{"query": "从六张数字卡片8、16、12、16、30、A中任意抽出一张，抽到卡片16和12的可能性一样大，那么卡片A上的数字是多少？", "answer": "12", "level": 1}
+{"query": "Calculate the following product, accurate to within 0.00001:\n    $$\\left(1-\frac{1}{10}\right)\\left(1-\frac{1}{10^{2}}\right) \\cdots\\left(1-\frac{1}{10^{99}}\right).$$", "answer": "0.89001", "level": 5}
+{"query": "在坐标平面内，与点$A\\left(1,2\\right)$距离为$3$，且与点$B\\left(3,2\\right)$距离为$1$的直线共有多少条？", "answer": "1条", "level": 4}
+{"query": "小芳参加庆祝建国70周年歌唱比赛，评委给她打出的分数分别是92、70、85、79、88、95，如果去掉一个最高分和一个最低分，小芳的平均得分是多少？", "answer": "86", "level": 1}
+{"query": "某人一周晚上值班2次，在已知他周日一定值班的条件下，求他在周六晚上值班的概率。", "answer": "\frac{1}{6}", "level": 2}
+{"query": "在2.004、200.4和20.04这三个数中，读数时只读一个零的是哪个数？", "answer": "20.04", "level": 2}
+{"query": "计算：$-1-\\left[ 6-\\left( -11 \right)+\\left( -8 \right) \right]$", "answer": "$-10$", "level": 1}
+{"query": "设复数$z$ 满足$ \\dfrac {z+1}{z-2}=1-3i$ ，求$|z|$。", "answer": "$\\sqrt{5}$", "level": 3}
+{"query": "已知x+y=5，xy=6，求x(x+y)(x−y)−x(x+y)²的值。", "answer": "−60", "level": 1}
+{"query": "In how many ways can the letters of the word PANACEA be arranged so that the three As are not all together?", "answer": "\b\\boxed{720}", "level": 3}
+{"query": "一列火车装运一批货物，原计划每节车皮装46吨，结果有100吨没装上去，后来每节多装4吨，不但货物全部装完，而且剩两节车皮，则这批货物有多少吨？", "answer": "2400", "level": 2}
+{"query": "求展开式 $(1 - x)^2 \\cdot (1 + x)^6$ 中 $x^4$ 项的系数。", "answer": "-10", "level": 2}
+{"query": "7.3. A flock of geese was flying over the lakes. On each lake, half of the geese and another half-goose landed, while the rest continued flying. All the geese landed on seven lakes. How many geese were in the flock?", "answer": "127", "level": 3}
+{"query": "关于$$x$$的不等式组$$\\left\\lbrace\begin{align}& x+a\\geqslant 0,\\cr& 1-2x > x-2\\end{align}\right .$$有解，则$$a$$的取值范围是___.", "answer": "$$a > -1$$", "level": 1}
+{"query": "下面是串按某种规律排列的自然数，1，1，2，2，3，3，4，4，5，5，6，6，…请问：其中第101个数至第110个数的和是多少？", "answer": "530", "level": 3}
+{"query": "求 \\mid \\matrix { 2 5 5 5   5 2 5 5   5 5 2 5   5 5 5 2 } \\mid", "answer": "-459", "level": 5}
+{"query": "Quadrilateral  $ABCD$  satisfies  $AB = 8, BC = 5, CD = 17, DA = 10$ . Let  $E$  be the intersection of  $AC$  and  $BD$ . Suppose  $BE : ED = 1 : 2$ . Find the area of  $ABCD$ .", "answer": "\b\\boxed{60}", "level": 5}
+{"query": "已知抛物线M: y²=4x的焦点F，O是坐标原点。斜率为k(k>0)的直线l交抛物线M于A、B两点，且点A、B分别位于第一、四象限，交抛物线的准线于点C。若S_{△ACF}=2S_{△ABF}，|BF|=2，求S_{△AOB}的值。", "answer": "3+√3", "level": 4}
+{"query": "过椭圆x²/25 + y²/16 =1的中心任作一直线交椭圆于P、Q两点，F是椭圆的一个焦点，则△PFQ的周长的最小值是多少？", "answer": "18", "level": 4}
+{"query": "某工程网络计划共有10项工作，其中A工作为起始工作，其紧后工作为B，B工作的紧后工作为C。A、B、C工作的持续时间分别为3天、4天、4天。已知B工作的总时差为2天，求B工作的最迟开始时间。", "answer": "5天", "level": 2}
+{"query": "已知等比数列$$\\{a_{n}\\}$$中，$$a_{2}=2$$，$$a_{6}=8$$，求$$a_{3}a_{4}a_{5}$$的值。", "answer": "64", "level": 2}
+{"query": "一批货物实际重量为20kg，长70cm、宽60cm、高50cm。按6000cm³折算为1kg计算，该货物的计费重量是多少？", "answer": "35 kg", "level": 1}
+{"query": "Determine the maximum integer  $ n $  such that for each positive integer  $ k \\le \\frac{n}{2} $  there are two positive divisors of  $ n $  with difference  $ k $ .", "answer": "\b\\boxed{24}", "level": 4}
+{"query": "24. 750名学生列队形成一个矩形阵列。学生A站在第一行的最左端，学生B站在最后一行的最右端。若相邻学生（横向或纵向）传递纸条需要3秒，求学生A将纸条传递给学生B的最短时间是多少秒？", "answer": "159", "level": 2}
+{"query": "Let $n$ be an integer, and let $\\triangle ABC$ be a right-angled triangle with right angle at $C$. It is given that $\\sin A$ and $\\sin B$ are the roots of the quadratic equation \n    \\[(5n+8)x^2-(7n-20)x+120=0.\\] \n    Find the value of $n$.", "answer": "\\boxed{66}", "level": 4}
+{"query": "3. How many solutions does the equation\n\n$$\nx-2019\\{x\\}=2019\n$$\n\nhave in the set of real numbers? (For a real number $x$, $\\lfloor x\\rfloor$ denotes the greatest integer not greater than $x$, and $\\{x\\}$ denotes the value $x-\\lfloor x\\rfloor$.)", "answer": "2018", "level": 3}
+{"query": "将5名教师分到3所学校任教，要求每所学校至少1名教师，则不同的分法共有多少种？", "answer": "150种", "level": 4}
+{"query": "某校棋乐无穷社团计划使用不超过500元的资金购买单价分别为60元、70元的象棋和围棋。根据需要，象棋至少买3盒，围棋至少买2盒。则不同的选购方式共有多少种？", "answer": "7种", "level": 2}
+{"query": "已知某钢筋外包尺寸为4500mm，钢筋两端弯钩增长值共为200mm，钢筋中间部位弯折的量度差值为50mm，其下料长度为多少毫米？", "answer": "4650", "level": 3}
+{"query": "将5名志愿者分到3个不同的场所进行志愿服务，要求每个场所至少1人，则不同的分配方案有多少种？", "answer": "150种", "level": 4}
+{"query": "湖面上飘着一个小球，湖水结冰后将球取出，冰面上留下一个半径6 cm、深2 cm的空穴。则取出该球前，球面上的点到冰面的最大距离是多少？", "answer": "18 cm", "level": 4}
+{"query": "已知正四棱柱 ABCD - A₁B₁C₁D₁ 中，AB = 2，CC₁ = 2√2，E 为 CC₁ 的中点。求直线 BE 与 AC₁ 所成角的余弦值。", "answer": "√6⁄3", "level": 1}
+{"query": "已知$a$，$b$，$c$为正实数，求$\frac{1}{{{a}^{3}}}+\frac{1}{{{b}^{3}}}+\frac{1}{{{c}^{3}}}+27abc$的最小值$m$。", "answer": "18", "level": 4}
+{"query": "根据规律，数列0，0，3，20，115，( )的下一个数是多少？", "answer": "714", "level": 5}
+{"query": "At a mathematics competition, 65 students are wearing blue shirts, and another 95 students are wearing green shirts. A total of 160 students are grouped into 80 pairs. If in exactly 25 of these pairs, both students are wearing blue shirts, determine how many pairs consist of both students wearing green shirts.", "answer": "40", "level": 3}
+{"query": "一道除法算式中，除数比余数大$$3$$，而且商大于$$2$$．若被除数和除数皆为两位数，那么除数最大是多少？", "answer": "$$25$$", "level": 2}
+{"query": "某公益基金收到甲乙丙三人的20万、25万、30万三笔捐款（一人捐一笔款），记者采访这三兄弟时，甲说：“乙捐的不是最少．”乙说：“甲捐的比丙多．”丙说：“若我捐的最少，则甲捐的不是最多．”根据这三人的回答，确定乙捐了多少万．", "answer": "30", "level": 3}
+{"query": "将1至30共30个数字放入盒子，然后按照以下规则调整：第一步：将所有为2的倍数的数字从盒子里取出来。第二步：将盒子里所有为3的倍数的数字放到盒子外，而将盒子外所有不为3的倍数的数字放在盒子内。第三步：将盒子里所有为4的倍数的数字放到盒子外，而将盒子外所有不为4的倍数的数字放在盒子内。这时，盒子内外数字和的差是多少？", "answer": "241", "level": 4}
+{"query": "In a joint maritime search and rescue exercise between China and foreign countries, the Chinese side participated with 4 ships and 3 airplanes; the foreign side with 5 ships and 2 airplanes. If 2 units are selected from each group (either 1 airplane or 1 ship counts as one unit, and all ships and airplanes are distinct), and among the four selected units exactly one is an airplane, the total number of different selection methods is ___.", "answer": "\b\\boxed{180}", "level": 5}
+{"query": "关于x的不等式（m+1）x≥m+1的解是x≤1，求m的取值范围。", "answer": "m≤-1", "level": 3}
+{"query": "How many distinct, positive factors does $13200$ have?", "answer": "60", "level": 1}
+{"query": "某登山队在山脚 A 处测得山顶 B 的仰角 35°，沿倾斜角 20° 的斜坡前进 1000 m 后到达点 D 处，又测得山顶的仰角 65°。求山的高度。(精确到 1 m)", "answer": "811", "level": 5}
+{"query": "Two cars, A and B, depart simultaneously from locations A and B, heading towards each other. They meet at a point 108 kilometers from location B. After reaching each other's starting points, they immediately return to their original locations, and meet again at a point 84 kilometers from location A. The distance between the two meeting points is ______ kilometers.", "answer": "\b\\boxed{48}", "level": 4}
+{"query": "在${\triangle ABC}$中，${∠B=45^{\\circ}}$，${\\cos A= \\dfrac {1}{2}}$，则∠C的度数是_____．", "answer": "75°", "level": 1}
+{"query": "已知F₁、F₂为椭圆$\\frac{x^2}{8} + \\frac{y^2}{4} = 1$的左右焦点，P是椭圆上一点，若$S_{\\triangle F₁PF₂} = 4$，求$\\angle F₁PF₂$等于多少度。", "answer": "90°", "level": 2}
+{"query": "按数列的排列规律猜想数列 2/3, -4/5, 6/7, -8/9,… 的第2017项是多少？", "answer": "4034/4035", "level": 1}
+{"query": "In the triangle \\( \triangle ABC \\), the lengths of the sides opposite to angles \\( \u0007ngle A \\), \\( \u0007ngle B \\), and \\( \u0007ngle C \\) are \\( a \\), \\( b \\), and \\( c \\) respectively. Given that:\n\\[\n\begin{cases}\n\u0007ngle C = \\max \\{\u0007ngle A, \u0007ngle B, \u0007ngle C\\}, \\\n\\sin C = 1 + \\cos C \\cdot \\cos (A-B), \\\n\frac{2}{a} + \frac{1}{b} = 1 .\n\\end{cases}\n\\]\nFind the minimum perimeter of the triangle \\( \triangle ABC \\).", "answer": "\b\\boxed{10}", "level": 4}
+{"query": "Regular polygons with 6, 7, 8, 9, and 10 sides are inscribed in the same circle. No two of the polygons share a vertex, and no three of their sides intersect at a common point. How many points inside the circle do exactly two of their sides intersect?", "answer": "140", "level": 5}
+{"query": "双曲线x²/a² - y²/b² = 1（a，b＞0）的左、右焦点分别为F₁、F₂，过焦点F₂且垂直于x轴的弦为AB。若∠AF₁B = 90°，求双曲线的离心率。", "answer": "√2 + 1", "level": 3}
+{"query": "已知平面内有一点P及一个△ABC，若$\\overrightarrow{PA}$+$\\overrightarrow{PB}$+$\\overrightarrow{PC}$=$\\overrightarrow{AB}$，求点P的位置。", "answer": "点P在线段AC上。", "level": 3}
+{"query": "已知$$f\\left ( x\right ) =2\\sin\\left ( \\omega x+\\phi\right ) \\left ( \\omega>0,\\left \\lvert \\phi\right \rvert \\leqslant \\dfrac{\\pi }{2}\right ) $$在$$\\left[ 0,\\dfrac{4\\pi}{3}\right]$$上单调，且$$f\\left ( \\dfrac{\\pi}{3}\right ) =0$$，$$f\\left ( \\dfrac{4\\pi}{3}\right ) =2$$，则$$f\\left ( 0\right ) =$$___。", "answer": "$$-1$$", "level": 2}
+{"query": "已知某正数的平方根是2n+1和n+5，求n的值。", "answer": "-2", "level": 5}
+{"query": "Team A and Team B each send out 5 players to participate in a chess broadcast tournament according to a pre-arranged order. The two teams first have their No. 1 players compete; the loser is eliminated, and the winner then competes with the No. 2 player of the losing team, …, until all players of one side are eliminated, and the other side wins. The sequence of wins and losses of the players thus forms a match process. Given that there are no draws in each match, how many possible match processes are there?", "answer": "252", "level": 2}
+{"query": "已知函数$$f(x)=a\\sin \\left( \frac{ \\pi }{2}x+\u0007lpha \right)+b\\cos \\left( \frac{ \\pi }{2}x+\beta \right)$$（$$a,b,\u0007lpha ,\beta $$为常数），且$$f(8)=m$$，设从$$1$$，$$3$$，$$5$$，$$7$$，$$9$$这五个数中，每次取出两个不同的数分别记为$$t,s$$，共可得到$$\\lg \\ t-\\lg \\ s$$的不同值的个数是$$m$$，求$$f(2018)$$的值。", "answer": "-18", "level": 5}
+{"query": "Dave notices that when he counts his coins by sevens, he has two left over; when he counts them by fives, he has three left over; and when he counts them by threes, he has one left over. What is the least number of coins that Dave could have?", "answer": "\\boxed{58}", "level": 3}
+{"query": "9. 五对双胞胎兄弟姐妹参加k个组活动，规则如下：(1) 双胞胎不在同一组；(2) 任意两个非双胞胎的人恰好共同参加一个组；(3) 每个人只参加两个组。求k的最小值。", "answer": "14", "level": 5}
+{"query": "曲面z=x²+y²与平面2x+4y-z=0平行的切平面方程是_____________.", "answer": "2x+4y-z=5", "level": 2}
+{"query": "一个两位数的十位数字与个位数字的和是9。如果把这个两位数加上63，那么恰好成为原两位数的个位数字与十位数字对调后组成的两位数，求原两位数是多少。", "answer": "18", "level": 1}
+{"query": "In a different ellipse, the center is at $(2,-3),$ one focus is at $(2,-5),$ and one endpoint of a semi-major axis is at $(2,0).$ Find the semi-minor axis of the ellipse.", "answer": "\\sqrt{5}", "level": 1}
+{"query": "小林的平均步长是0.54米，他从家到学校往返一趟走了820步，他家离学校多少米？", "answer": "221.4", "level": 1}
+{"query": "If w is 40 percent less than x, x is 40 percent less than y, and z is some percent less than y, then z is greater than w by 50 percent of w. What is the percentage by which z is less than y?", "answer": "\b\\boxed{46}", "level": 1}
+{"query": "4.3.4.4 * A natural number greater than 1, if it is exactly equal to the product of its distinct proper divisors (divisors other than 1 and itself), then it is called \"good\". Find the sum of the first ten \"good\" natural numbers.", "answer": "182", "level": 5}
+{"query": "Six of the eight numbers 1871, 2011, 2059, 2084, 2113, 2167, 2198, and 2210 have a mean (average) of 2100. What is the mean (average) of the other two numbers?", "answer": "2056.5", "level": 4}
+{"query": "双曲线8mx² - my² =8的一个焦点为(0, -3)，求m的值。", "answer": "-1", "level": 5}
+{"query": "在直角△ABC中，∠C=90°，若sinA=$$\frac{1}{3}$$，求tanB的值。", "answer": "2√2", "level": 2}
+{"query": "找出数列2，2，4，12，60，480的下一个数，并说明其规律。", "answer": "6240", "level": 3}
+{"query": "已知实数 \\( x \\) 和 \\( y \\) 满足 \\( x^3 + 21xy + y^3 = 343 \\)，求 \\( x + y \\) 的所有可能值。", "answer": "7 和 -14", "level": 5}
+{"query": "泰国旅游，妈妈带了3000元人民币到银行兑换成泰铢，能换多少泰铢？（按照100泰铢兑换人民币19.67元）", "answer": "15251.65泰铢", "level": 4}
+{"query": "每次射箭最多10环，最少0环。前6箭射了52环，还剩4箭，要想打破89环，则第7箭至少射中多少环？", "answer": "8环", "level": 3}
+{"query": "已知正四面体ABCD，M为AB的中点。求直线CM与直线BD所成角的余弦值。", "answer": "√3/6", "level": 4}
+{"query": "已知AB是圆锥PO的底面直径，C是底面圆周上的点，∠BAC=30°，AB=2√3，PA=2，求PA与平面PBC所成角的正弦值。", "answer": "3√13/13", "level": 5}
+{"query": "在展开式 $(x^3 + 2)\\left(2x - \\frac{1}{x^2}\\right)^6$ 中，常数项是多少？", "answer": "320", "level": 4}
+{"query": "What is the greatest common divisor of $118^2 + 227^2 + 341^2$ and $119^2 + 226^2 + 340^2$?", "answer": "$\b\\boxed{3}$", "level": 4}
+{"query": "In a certain electronic device, there are three components, with probabilities of failure being $0.1$, $0.2$, and $0.3$, respectively. If one, two, or three components fail, the probabilities of the device malfunctioning are $0.25$, $0.6$, and $0.9$, respectively. Find the probability that the device malfunctions.", "answer": "0.1601", "level": 2}
+{"query": "已知 \\lim _{x \to -1} \frac{x + a}{x^2 - 2x - 3} = -\frac{1}{4}，求a的值。", "answer": "a的值为1。", "level": 1}
+{"query": "求极限：\\[ \\lim_{x \\to 2} \\frac{\\sin(x^2 - 4)}{\\sqrt{x + 2} - 2} \\]", "answer": "16", "level": 2}
+{"query": "Three pens and four pencils cost $2.64. Four pens and two pencils cost $2.30. What is the cost of a pen in cents?", "answer": "39.2", "level": 1}
+{"query": "设数列{aₙ}的前n项和为Sₙ，且数列{Sₙ/n}是等差数列。已知a₃=3a₅，求S₅/S₉的值。", "answer": "5/3", "level": 3}
+{"query": "已知三个数x、y、z满足xy ÷ (x + y) = -3，yz ÷ (y + z) = 4/3，zx ÷ (z + x) = -4/3，求xyz ÷ (xy + yz + zx)的值。", "answer": "-6", "level": 5}
+{"query": "数据5、7、x、9、8的平均数是8，则x的值是多少？", "answer": "11", "level": 3}
+{"query": "有5名高中优秀毕业生回母校成都七中参加高2015级励志成才活动，到3个班去做学习经验交流，则每个班至少去一名的不同分派方法种数为多少？", "answer": "150", "level": 4}
+{"query": "观察数列的特点并在空白处填上恰当的数：77, 49, 36, __。", "answer": "18", "level": 5}
+{"query": "在$\triangle ABC$ 中，$∠ABC=60°$，$BC=2AB=2$，$E$ 为$AC$ 的中点，求$ \\overrightarrow{AB} \\cdot \\overrightarrow{BE}$ 的值。", "answer": "-1", "level": 5}
+{"query": "已知数列 1, 1, 2, 1, 2, 4, 1, 2, 4, 8, 1, 2, 4, 8, 16, ……，其中第一项是 $2^0$，接下来的两项是 $2^0$, $2^1$，再接下来的三项是 $2^0$, $2^1$, $2^2$，依此类推。求满足条件的最小整数 $N$：$N > 100$ 且该数列的前 $N$ 项和为 2 的整数幂。", "answer": "440", "level": 5}
+{"query": "For each positive integer \\( n \\), define the set\n    \\[ P_{n}=\\{n^{k} \\mid k=0,1, \\cdots\\}. \\]\n\n    For positive integers \\( a, b, c \\), if there exists a positive integer \\( m \\) such that the numbers \\( a-1, ab-12, abc-2015 \\) (not necessarily distinct) are all elements of the set \\( P_{m} \\), then the positive integer tuple \\( (a, b, c) \\) is called \"lucky\". Find the total number of lucky tuples.", "answer": "\b\\boxed{25}", "level": 5}
+{"query": "硬卧车1辆（定员60人）代用硬座车，每一硬卧下铺按4人计算，该车厢标记定员为多少？", "answer": "80人", "level": 4}
+{"query": "7位同学站成一排，甲、乙两同学必须相邻，而且丙不能站在排头和排尾的排法有多少种？", "answer": "960", "level": 2}
+{"query": "有三种文具：铅笔、练习本和圆珠笔。若购买3支铅笔、7本练习本和1支圆珠笔，共需3.15元；若购买4支铅笔、10本练习本和1支圆珠笔，共需4.2元。求购买1支铅笔、1本练习本和1支圆珠笔需要多少钱？", "answer": "1.05", "level": 1}
+{"query": "有一片青草地，每天生长的速度相同，已知这片青草地可供15头牛吃20天，或者供76只羊吃12天，如果一头牛的吃草量等于4只羊的吃草量，那么8头牛与64只羊一起吃，可以吃多少天？", "answer": "8天", "level": 2}
+{"query": "在制定行车计划时，若要求在一小时内发出11个车次，车辆的周转时间为70分钟，则最少需要投入多少辆车？", "answer": "13", "level": 3}
+{"query": "在 $\triangle ABC$ 中，角 $A$、$B$、$C$ 的对边分别为 $a$、$b$、$c$。若 $a = 2$，且 $(2 + c)(\\sin A - \\sin C) = b(\\sin B - \\sin C)$，求 $BC$ 边上的高的最大值。", "answer": "$\\sqrt{3}$", "level": 3}
+{"query": "已知向量$\\overset{\rightarrow }{a}=\\left(2,1,1\right)$，$\\overset{\rightarrow }{b}=\\left(-1,3,k\right)$，若$\\overset{\rightarrow }{a}\bot \\overset{\rightarrow }{b}$，则$k$的值是多少？", "answer": "$-1$", "level": 1}
+{"query": "如果x > y，且(a−1)x < (a−1)y，那么a的取值范围是多少？", "answer": "a < 1", "level": 2}
