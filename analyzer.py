@@ -5,6 +5,7 @@ Main analysis pipeline for logits study
 import os
 import json
 import numpy as np
+import torch
 from typing import Dict, List, Any, Tuple
 from tqdm import tqdm
 import pickle
@@ -319,13 +320,15 @@ class LogitsAnalyzer:
         
         print(f"All visualizations saved to {DATA_CONFIG['output_dir']}")
     
-    def run_full_analysis(self, model_names: List[str] = None, data_file: str = None):
+    def run_full_analysis(self, model_names: List[str] = None, data_file: str = None, 
+                         generate_predictions: bool = True):
         """
         Run the complete analysis pipeline
         
         Args:
             model_names: List of model names to analyze
             data_file: Path to data file
+            generate_predictions: Whether to generate model predictions for correctness evaluation
         """
         print("=== Starting Logits Analysis ===")
         
@@ -338,6 +341,50 @@ class LogitsAnalyzer:
         if not self.models:
             print("No models loaded successfully. Exiting.")
             return
+        
+        # Generate predictions and evaluate correctness if requested
+        if generate_predictions and self.models:
+            print("\\n=== Generating Predictions for Correctness Evaluation ===")
+            
+            # Use the first available model for prediction generation
+            # (You can modify this to generate predictions for all models)
+            prediction_model = list(self.models.keys())[0]
+            print(f"Using {prediction_model} for prediction generation...")
+            
+            try:
+                predictions = self.generate_model_predictions(prediction_model, self.data_processor.data)
+                
+                # Evaluate correctness and update data
+                self.data_processor.add_correctness_from_predictions(predictions)
+                
+                # Save predictions and evaluations
+                eval_file = f"{DATA_CONFIG['output_dir']}/predictions_evaluation.json"
+                os.makedirs(DATA_CONFIG['output_dir'], exist_ok=True)
+                
+                eval_data = {
+                    'model_used': prediction_model,
+                    'total_samples': len(predictions),
+                    'predictions': [
+                        {
+                            'query': item['query'],
+                            'ground_truth': item['answer'],
+                            'prediction': item['prediction'],
+                            'extracted_answer': item['extracted_answer'],
+                            'is_correct': item['is_correct'],
+                            'explanation': item['comparison_explanation']
+                        }
+                        for item in self.data_processor.data
+                    ]
+                }
+                
+                with open(eval_file, 'w', encoding='utf-8') as f:
+                    json.dump(eval_data, f, ensure_ascii=False, indent=2)
+                
+                print(f"Predictions and evaluations saved to {eval_file}")
+                
+            except Exception as e:
+                print(f"Warning: Failed to generate predictions: {e}")
+                print("Continuing with logits analysis...")
         
         # Extract logits
         all_logits = self.extract_all_logits()
@@ -358,6 +405,8 @@ class LogitsAnalyzer:
         print(f"\\n=== Analysis Complete ===")
         print(f"Results saved to {DATA_CONFIG['output_dir']}")
         print(f"Open {DATA_CONFIG['output_dir']}/dashboard.html to view the dashboard")
+        if generate_predictions:
+            print(f"Prediction evaluations available in {DATA_CONFIG['output_dir']}/predictions_evaluation.json")
     
     def _make_json_serializable(self, obj):
         """Convert numpy arrays and other non-serializable objects to JSON-compatible types"""
@@ -371,7 +420,63 @@ class LogitsAnalyzer:
             return float(obj)
         else:
             return obj
-
+    
+    def generate_model_predictions(self, model_name: str, data: List[Dict[str, Any]]) -> List[str]:
+        """
+        使用指定模型生成预测答案
+        
+        Args:
+            model_name: 模型名称
+            data: 输入数据列表
+            
+        Returns:
+            预测答案列表
+        """
+        if model_name not in self.models:
+            raise ValueError(f"Model {model_name} not loaded")
+        
+        model = self.models[model_name]
+        predictions = []
+        
+        print(f"Generating predictions with {model_name}...")
+        
+        for item in tqdm(data, desc=f"Predicting with {model_name}"):
+            query = item['query']
+            
+            # 构造输入文本
+            input_text = f"Question: {query}\nAnswer:"
+            
+            try:
+                # 生成回答
+                inputs = model.tokenizer(
+                    input_text,
+                    return_tensors="pt",
+                    max_length=ANALYSIS_CONFIG['max_length'],
+                    truncation=True
+                ).to(model.device)
+                
+                with torch.no_grad():
+                    outputs = model.model.generate(
+                        **inputs,
+                        max_new_tokens=512,
+                        do_sample=True,
+                        temperature=0.7,
+                        pad_token_id=model.tokenizer.eos_token_id
+                    )
+                
+                # 解码生成的文本
+                generated_text = model.tokenizer.decode(
+                    outputs[0][inputs['input_ids'].shape[1]:], 
+                    skip_special_tokens=True
+                )
+                
+                predictions.append(generated_text)
+                
+            except Exception as e:
+                print(f"Error generating prediction for item: {e}")
+                predictions.append("")  # 添加空预测以保持索引一致
+        
+        return predictions
 
 if __name__ == "__main__":
     analyzer = LogitsAnalyzer()

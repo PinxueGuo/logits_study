@@ -28,7 +28,13 @@ class DataProcessor:
             List of data dictionaries
         """
         if not os.path.exists(self.input_file):
-            raise FileNotFoundError(f"Input file {self.input_file} not found")
+            # 尝试使用默认的数据文件
+            default_file = "data/logits_study_data.jsonl"
+            if os.path.exists(default_file):
+                print(f"Using default data file: {default_file}")
+                self.input_file = default_file
+            else:
+                raise FileNotFoundError(f"Input file {self.input_file} not found and no default data available")
         
         with jsonlines.open(self.input_file) as reader:
             self.data = list(reader)
@@ -132,6 +138,60 @@ class DataProcessor:
             writer.write_all(data)
         
         print(f"Saved {len(data)} items to {output_file}")
+
+    def evaluate_predictions(self, predictions: List[str]) -> List[Dict[str, Any]]:
+        """
+        评估预测答案的正确性
+        
+        Args:
+            predictions: 模型预测的回答列表
+            
+        Returns:
+            包含正确性评估的数据列表
+        """
+        from answer_comparator import extract_and_compare_answer
+        
+        if len(predictions) != len(self.data):
+            raise ValueError(f"预测数量({len(predictions)})与数据数量({len(self.data)})不匹配")
+        
+        evaluated_data = []
+        correct_count = 0
+        
+        for i, (item, prediction) in enumerate(zip(self.data, predictions)):
+            # 提取并比较答案
+            is_correct, extracted_answer, explanation = extract_and_compare_answer(
+                prediction, item['answer']
+            )
+            
+            # 创建新的数据项
+            evaluated_item = item.copy()
+            evaluated_item.update({
+                'prediction': prediction,
+                'extracted_answer': extracted_answer,
+                'is_correct': is_correct,
+                'comparison_explanation': explanation
+            })
+            
+            evaluated_data.append(evaluated_item)
+            
+            if is_correct:
+                correct_count += 1
+        
+        accuracy = correct_count / len(predictions) if predictions else 0
+        print(f"评估完成: {correct_count}/{len(predictions)} 正确 (准确率: {accuracy:.2%})")
+        
+        return evaluated_data
+    
+    def add_correctness_from_predictions(self, predictions: List[str]) -> None:
+        """
+        根据预测结果添加正确性标记到现有数据
+        
+        Args:
+            predictions: 模型预测的回答列表
+        """
+        evaluated_data = self.evaluate_predictions(predictions)
+        self.data = evaluated_data
+        print("数据已更新，包含正确性评估结果")
 
 def create_sample_data(output_file: str, num_samples: int = 20):
     """

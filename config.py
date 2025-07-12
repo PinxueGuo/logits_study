@@ -28,18 +28,18 @@ TARGET_TOKENS = ['wait', 'aha', 'check', 'think', 'hmm', 'let', 'actually', 'how
 
 # Data configuration
 DATA_CONFIG = {
-    'input_file': 'data/queries.jsonl',  # Expected format: {'query': str, 'answer': str, 'level': int}
+    'input_file': 'data/logits_study_data.jsonl',  # Expected format: {'query': str, 'answer': str, 'level': int}
     'output_dir': 'results',
     'cache_dir': 'cache'
 }
 
 # Analysis configuration
 ANALYSIS_CONFIG = {
-    'max_length': 2048,
+    'max_length': 32*1024,
     'batch_size': 4,
-    'device': 'cuda' if os.path.exists('/dev/nvidia0') else 'cpu',
-    'torch_dtype': 'float16',
-    'context_window': 10,  # Tokens before and after target token to analyze
+    'device': 'cuda',
+    'torch_dtype': 'bfloat16',
+    'context_window': 100,  # Tokens before and after target token to analyze
 }
 
 # Visualization configuration

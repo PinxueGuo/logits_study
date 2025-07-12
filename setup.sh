@@ -25,14 +25,6 @@ uv sync
 echo "🔍 检查CUDA环境..."
 uv run python -c "import torch; print(f'CUDA可用: {torch.cuda.is_available()}'); print(f'CUDA版本: {torch.version.cuda if torch.cuda.is_available() else \"N/A\"}')"
 
-# # 创建示例数据
-# echo "📝 创建示例数据..."
-# uv run python -c "
-# from data_processor import create_sample_data
-# create_sample_data('data/queries.jsonl', num_samples=20)
-# print('示例数据已创建')
-# "
-
 # 验证安装
 echo "🧪 验证安装..."
 uv run python -c "

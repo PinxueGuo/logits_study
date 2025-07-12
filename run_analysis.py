@@ -18,7 +18,14 @@ def setup_environment():
     print("Environment setup complete!")
 
 def create_sample_data():
-    """Create sample data for testing"""
+    """Check if data file exists, skip creation if it does"""
+    data_file = "data/logits_study_data.jsonl"
+    
+    if os.path.exists(data_file):
+        print(f"Data file {data_file} already exists, skipping creation.")
+        return
+    
+    # Only create sample data if the actual data file doesn't exist
     from data_processor import create_sample_data
     
     data_dir = Path("data")
@@ -26,8 +33,9 @@ def create_sample_data():
     
     create_sample_data("data/queries.jsonl", num_samples=20)
     print("Sample data created!")
+    print("Note: Please replace with your actual data file: data/logits_study_data.jsonl")
 
-def run_analysis(models=None, data_file=None):
+def run_analysis(models=None, data_file=None, generate_predictions=True):
     """Run the logits analysis"""
     from analyzer import LogitsAnalyzer
     
@@ -36,9 +44,9 @@ def run_analysis(models=None, data_file=None):
     try:
         if models:
             model_list = models.split(',')
-            analyzer.run_full_analysis(model_list, data_file)
+            analyzer.run_full_analysis(model_list, data_file, generate_predictions)
         else:
-            analyzer.run_full_analysis(data_file=data_file)
+            analyzer.run_full_analysis(data_file=data_file, generate_predictions=generate_predictions)
     except Exception as e:
         print(f"Analysis failed: {e}")
         print("\\nIf you're running this for the first time, the model paths might need to be adjusted.")
@@ -52,13 +60,16 @@ def main():
     parser.add_argument("--models", type=str, help="Comma-separated list of models to analyze (baseline,sft,rl)")
     parser.add_argument("--data", type=str, help="Path to data file")
     parser.add_argument("--all", action="store_true", help="Run complete pipeline (setup + sample + analysis)")
+    parser.add_argument("--no-predictions", action="store_true", help="Skip prediction generation (only analyze logits)")
     
     args = parser.parse_args()
+    
+    generate_predictions = not args.no_predictions
     
     if args.all:
         setup_environment()
         create_sample_data()
-        run_analysis(args.models, args.data)
+        run_analysis(args.models, args.data, generate_predictions)
     else:
         if args.setup:
             setup_environment()
@@ -67,7 +78,7 @@ def main():
             create_sample_data()
         
         if args.run:
-            run_analysis(args.models, args.data)
+            run_analysis(args.models, args.data, generate_predictions)
     
     if not any([args.setup, args.create_sample, args.run, args.all]):
         parser.print_help()
