@@ -16,3 +16,5 @@ venv/
 # results
 results/*
 cache/*
+
+.DS_Store
