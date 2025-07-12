@@ -45,7 +45,6 @@ uv sync
   "query": "问题内容",
   "answer": "回答内容", 
   "level": 1-5,
-  "is_correct": true/false
 }
 ```
 

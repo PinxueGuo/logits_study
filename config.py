@@ -18,7 +18,7 @@ MODELS = {
     },
     'rl': {
         'name': 'RL-DeepSeek-R1-Distill-Qwen-7B',
-        'path': '/gpfs/users/xizhiheng/qiji_projects/NorthRL/checkpoints/xizhiheng_SkyWork_runs_DeepSeek-R1-Distill-Qwen-7B-Rethink-RL-Loss/xizhiheng___fsdp_valFirst_lr2e-6_kl0-low0.4-high0.2-partial-budget-1-len32k-skywork-grpo-temperature0.6-ppo_epochs2-stale1-testtmp-4-testdynamicclip-targetpos0.5-left---right-1.0-inf-1/global_step_380',
+        'path': '/gpfs/shared_data/qiji/mllm/models/DeepSeek-R1-Distill-Qwen-7B-xizhihengRL',
         'description': 'RL Trained Model'
     }
 }
