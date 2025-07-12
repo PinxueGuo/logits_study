@@ -88,17 +88,22 @@ class DataProcessor:
         
         return [item for item in self.data if item['is_correct'] == is_correct]
     
-    def create_full_text(self, item: Dict[str, Any]) -> str:
+    def create_full_text(self, item: Dict[str, Any], include_system_prompt: bool = True) -> str:
         """
         Create full text from query and answer
         
         Args:
             item: Data item
+            include_system_prompt: Whether to include system prompt
             
         Returns:
             Full text string
         """
-        return f"Query: {item['query']}\nAnswer: {item['answer']}"
+        if include_system_prompt:
+            system_prompt = "Please reason step by step, and put your final answer within \\boxed{}"
+            return f"System: {system_prompt}\nQuery: {item['query']}\nAnswer: {item['answer']}"
+        else:
+            return f"Query: {item['query']}\nAnswer: {item['answer']}"
     
     def get_summary_stats(self) -> Dict[str, Any]:
         """

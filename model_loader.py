@@ -68,7 +68,7 @@ class LogitsExtractor:
         
         with torch.no_grad():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits[0].cpu().numpy()  # Shape: (seq_len, vocab_size)
+            logits = outputs.logits[0].float().cpu().numpy()  # Convert to float32 before numpy
         
         return logits, tokens
     

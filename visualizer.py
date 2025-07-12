@@ -1,12 +1,9 @@
 """
-Visualization utilities for logits analysis
+Visualization utilities for logits analysis - focused on heatmaps only
 """
 
 import matplotlib.pyplot as plt
 import seaborn as sns
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Tuple
@@ -32,245 +29,147 @@ class LogitsVisualizer:
         plt.style.use('default')
         sns.set_palette("husl")
     
-    def plot_token_logits_heatmap(self, logits_data: Dict[str, np.ndarray], 
-                                 tokens: List[str], target_positions: Dict[str, List[int]],
-                                 title: str = "Token Logits Heatmap"):
+    def plot_logits_heatmap(self, logits: np.ndarray, tokens: List[str], 
+                           target_positions: Dict[str, List[int]], 
+                           answer_length: int, total_length: int,
+                           model_name: str, level: int, is_correct: bool,
+                           target_tokens: List[str]):
         """
-        Create heatmap of logits around target tokens
+        Create heatmap showing logits vs normalized answer position
         
         Args:
-            logits_data: Dictionary mapping model names to logits arrays
-            tokens: List of tokens
+            logits: Logits array (seq_len, vocab_size)
+            tokens: List of token strings
             target_positions: Dictionary of target token positions
-            title: Plot title
+            answer_length: Length of the answer portion
+            total_length: Total length of the sequence
+            model_name: Name of the model
+            level: Difficulty level
+            is_correct: Whether the answer is correct
+            target_tokens: List of target tokens to analyze
         """
-        fig, axes = plt.subplots(len(logits_data), 1, figsize=(self.figsize[0], self.figsize[1] * len(logits_data)))
-        if len(logits_data) == 1:
-            axes = [axes]
+        # Calculate normalized positions (0-1 for answer portion)
+        answer_start = total_length - answer_length
+        normalized_positions = []
+        logits_values = []
+        token_labels = []
         
-        for i, (model_name, logits) in enumerate(logits_data.items()):
-            # Create a subset of logits for visualization (top-k most probable tokens)
-            top_k = 50  # Show top 50 tokens
-            avg_logits = np.mean(logits, axis=0)
-            top_indices = np.argsort(avg_logits)[-top_k:]
+        # Extract logits for target tokens in answer portion
+        for i in range(answer_start, total_length):
+            if i < len(logits):
+                normalized_pos = (i - answer_start) / max(1, answer_length - 1)
+                
+                # Check if this position contains a target token
+                current_token = tokens[i] if i < len(tokens) else ""
+                cleaned_token = current_token.replace('Ġ', '').replace('▁', '').lower().strip()
+                
+                for target_token in target_tokens:
+                    if (cleaned_token == target_token.lower() or 
+                        current_token.lower() == target_token.lower()):
+                        
+                        # Get logit values for this target token
+                        logit_values = logits[i]  # All vocab logits at this position
+                        
+                        normalized_positions.append(normalized_pos)
+                        logits_values.append(logit_values)
+                        token_labels.append(target_token)
+        
+        if not normalized_positions:
+            print(f"No target tokens found in answer for {model_name}, level {level}, correct: {is_correct}")
+            return
+        
+        # Create heatmap data
+        # Use top-k most variable tokens across all positions
+        all_logits = np.array(logits_values)  # Shape: (n_positions, vocab_size)
+        
+        if len(all_logits) == 0:
+            return
             
-            # Create heatmap data
-            heatmap_data = logits[:, top_indices].T
-            
-            sns.heatmap(heatmap_data, ax=axes[i], cmap='viridis', 
-                       xticklabels=range(len(tokens)), 
-                       yticklabels=[f"Token_{idx}" for idx in top_indices])
-            
-            axes[i].set_title(f"{title} - {model_name}")
-            axes[i].set_xlabel("Token Position")
-            axes[i].set_ylabel("Vocabulary Tokens")
-            
-            # Mark target token positions
-            for token, positions in target_positions.items():
-                for pos in positions:
-                    if pos < len(tokens):
-                        axes[i].axvline(x=pos, color='red', linestyle='--', alpha=0.7, linewidth=2)
-                        axes[i].text(pos, top_k//2, token, rotation=90, 
-                                   verticalalignment='center', color='white', fontweight='bold')
+        # Select top tokens by variance
+        top_k = min(100, all_logits.shape[1])
+        token_variances = np.var(all_logits, axis=0)
+        top_indices = np.argsort(token_variances)[-top_k:]
+        
+        heatmap_data = all_logits[:, top_indices].T  # Shape: (top_k, n_positions)
+        
+        # Create the plot
+        plt.figure(figsize=self.figsize)
+        
+        # Create heatmap
+        sns.heatmap(heatmap_data, 
+                   xticklabels=[f"{pos:.2f}" for pos in normalized_positions],
+                   yticklabels=[f"Vocab_{idx}" for idx in top_indices],
+                   cmap='viridis',
+                   cbar_kws={'label': 'Logit Value'})
+        
+        # Mark target token positions
+        for i, (pos, token) in enumerate(zip(normalized_positions, token_labels)):
+            plt.axvline(x=i, color='red', linestyle='--', alpha=0.8, linewidth=2)
+            plt.text(i, len(top_indices)//2, token, rotation=90, 
+                    verticalalignment='center', color='white', 
+                    fontweight='bold', fontsize=10)
+        
+        # Set labels and title
+        plt.xlabel('Normalized Answer Position (0=start, 1=end)')
+        plt.ylabel('Vocabulary Tokens (by variance)')
+        
+        correctness = "Correct" if is_correct else "Incorrect"
+        plt.title(f'Logits Heatmap: {model_name} | Level {level} | {correctness}')
         
         plt.tight_layout()
-        plt.savefig(f"{self.output_dir}/logits_heatmap.png", dpi=self.dpi, bbox_inches='tight')
+        
+        # Save with descriptive filename
+        filename = f"heatmap_{model_name}_level{level}_{correctness.lower()}.png"
+        plt.savefig(f"{self.output_dir}/{filename}", dpi=self.dpi, bbox_inches='tight')
         plt.close()
+        
+        print(f"Saved heatmap: {filename}")
     
-    def plot_target_token_probabilities(self, prob_data: Dict[str, Dict[str, np.ndarray]], 
-                                      title: str = "Target Token Probabilities"):
+    def create_all_heatmaps(self, results_data: Dict[str, Any], target_tokens: List[str]):
         """
-        Plot probabilities of target tokens across models
+        Create heatmaps for all model/level/correctness combinations
         
         Args:
-            prob_data: Nested dict {model: {token: probabilities}}
-            title: Plot title
+            results_data: Analysis results containing logits and metadata
+            target_tokens: List of target tokens to analyze
         """
-        fig = make_subplots(
-            rows=len(prob_data), cols=1,
-            subplot_titles=list(prob_data.keys()),
-            vertical_spacing=0.1
-        )
+        print("Creating heatmaps for all combinations...")
         
-        colors = px.colors.qualitative.Set3
-        
-        for i, (model_name, model_probs) in enumerate(prob_data.items()):
-            for j, (token, probs) in enumerate(model_probs.items()):
-                fig.add_trace(
-                    go.Scatter(
-                        x=list(range(len(probs))),
-                        y=probs,
-                        mode='lines+markers',
-                        name=f"{token}",
-                        line=dict(color=colors[j % len(colors)]),
-                        showlegend=(i == 0)  # Only show legend for first subplot
-                    ),
-                    row=i+1, col=1
+        for model_name, model_results in results_data.items():
+            for logits, tokens, metadata in model_results:
+                # Calculate answer length and positions
+                answer_text = metadata.get('answer', '')
+                total_text = f"Query: {metadata.get('query', '')}\nAnswer: {answer_text}"
+                
+                # Rough estimation of answer portion
+                answer_start_approx = len(total_text) - len(answer_text)
+                answer_length = len(answer_text)
+                total_length = len(tokens)
+                
+                # Find target token positions
+                target_positions = {}
+                for target_token in target_tokens:
+                    positions = []
+                    for i, token in enumerate(tokens):
+                        cleaned_token = token.replace('Ġ', '').replace('▁', '').lower().strip()
+                        if (cleaned_token == target_token.lower() or 
+                            token.lower() == target_token.lower()):
+                            positions.append(i)
+                    target_positions[target_token] = positions
+                
+                # Get metadata
+                level = metadata.get('level', 1)
+                is_correct = metadata.get('is_correct', False)
+                
+                # Create heatmap
+                self.plot_logits_heatmap(
+                    logits=logits,
+                    tokens=tokens,
+                    target_positions=target_positions,
+                    answer_length=answer_length,
+                    total_length=total_length,
+                    model_name=model_name,
+                    level=level,
+                    is_correct=is_correct,
+                    target_tokens=target_tokens
                 )
-        
-        fig.update_layout(
-            title=title,
-            height=300 * len(prob_data),
-            xaxis_title="Token Position",
-            yaxis_title="Probability"
-        )
-        
-        fig.write_html(f"{self.output_dir}/target_token_probabilities.html")
-        return fig
-    
-    def plot_model_comparison(self, comparison_data: Dict[str, Dict[str, float]], 
-                            metric: str = "Average Probability"):
-        """
-        Create comparison plots between models
-        
-        Args:
-            comparison_data: {model: {token: metric_value}}
-            metric: Name of the metric being compared
-        """
-        # Convert to DataFrame for easier plotting
-        df_data = []
-        for model, token_data in comparison_data.items():
-            for token, value in token_data.items():
-                df_data.append({'Model': model, 'Token': token, 'Value': value})
-        
-        df = pd.DataFrame(df_data)
-        
-        # Create grouped bar plot
-        plt.figure(figsize=self.figsize)
-        sns.barplot(data=df, x='Token', y='Value', hue='Model')
-        plt.title(f"Model Comparison: {metric}")
-        plt.xticks(rotation=45)
-        plt.legend(title='Model')
-        plt.tight_layout()
-        plt.savefig(f"{self.output_dir}/model_comparison_{metric.lower().replace(' ', '_')}.png", 
-                   dpi=self.dpi, bbox_inches='tight')
-        plt.close()
-    
-    def plot_level_analysis(self, level_data: Dict[int, Dict[str, float]], 
-                          metric: str = "Average Probability"):
-        """
-        Plot analysis by difficulty level
-        
-        Args:
-            level_data: {level: {token: metric_value}}
-            metric: Name of the metric being compared
-        """
-        # Convert to DataFrame
-        df_data = []
-        for level, token_data in level_data.items():
-            for token, value in token_data.items():
-                df_data.append({'Level': level, 'Token': token, 'Value': value})
-        
-        df = pd.DataFrame(df_data)
-        
-        # Create line plot
-        plt.figure(figsize=self.figsize)
-        for token in df['Token'].unique():
-            token_data = df[df['Token'] == token]
-            plt.plot(token_data['Level'], token_data['Value'], marker='o', label=token)
-        
-        plt.title(f"Analysis by Difficulty Level: {metric}")
-        plt.xlabel("Difficulty Level")
-        plt.ylabel(metric)
-        plt.legend()
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.savefig(f"{self.output_dir}/level_analysis_{metric.lower().replace(' ', '_')}.png", 
-                   dpi=self.dpi, bbox_inches='tight')
-        plt.close()
-    
-    def plot_correctness_comparison(self, correctness_data: Dict[bool, Dict[str, float]], 
-                                  metric: str = "Average Probability"):
-        """
-        Plot comparison between correct and incorrect answers
-        
-        Args:
-            correctness_data: {is_correct: {token: metric_value}}
-            metric: Name of the metric being compared
-        """
-        # Convert to DataFrame
-        df_data = []
-        for is_correct, token_data in correctness_data.items():
-            correctness_label = "Correct" if is_correct else "Incorrect"
-            for token, value in token_data.items():
-                df_data.append({'Correctness': correctness_label, 'Token': token, 'Value': value})
-        
-        df = pd.DataFrame(df_data)
-        
-        # Create grouped bar plot
-        plt.figure(figsize=self.figsize)
-        sns.barplot(data=df, x='Token', y='Value', hue='Correctness')
-        plt.title(f"Correctness Comparison: {metric}")
-        plt.xticks(rotation=45)
-        plt.legend(title='Answer Correctness')
-        plt.tight_layout()
-        plt.savefig(f"{self.output_dir}/correctness_comparison_{metric.lower().replace(' ', '_')}.png", 
-                   dpi=self.dpi, bbox_inches='tight')
-        plt.close()
-    
-    def create_interactive_dashboard(self, all_data: Dict[str, Any]):
-        """
-        Create an interactive dashboard with all visualizations
-        
-        Args:
-            all_data: Dictionary containing all analysis results
-        """
-        # This would create a comprehensive dashboard
-        # For now, we'll create a simple HTML report
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Logits Analysis Dashboard</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                .section {{ margin: 30px 0; }}
-                .plot {{ margin: 20px 0; }}
-                img {{ max-width: 100%; height: auto; }}
-            </style>
-        </head>
-        <body>
-            <h1>LLM Logits Analysis Dashboard</h1>
-            
-            <div class="section">
-                <h2>Model Comparison</h2>
-                <div class="plot">
-                    <img src="model_comparison_average_probability.png" alt="Model Comparison">
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>Level Analysis</h2>
-                <div class="plot">
-                    <img src="level_analysis_average_probability.png" alt="Level Analysis">
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>Correctness Analysis</h2>
-                <div class="plot">
-                    <img src="correctness_comparison_average_probability.png" alt="Correctness Comparison">
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>Logits Heatmap</h2>
-                <div class="plot">
-                    <img src="logits_heatmap.png" alt="Logits Heatmap">
-                </div>
-            </div>
-            
-            <div class="section">
-                <h2>Interactive Probability Plot</h2>
-                <div class="plot">
-                    <iframe src="target_token_probabilities.html" width="100%" height="600"></iframe>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-        with open(f"{self.output_dir}/dashboard.html", 'w') as f:
-            f.write(html_content)
-        
-        print(f"Dashboard created at {self.output_dir}/dashboard.html")

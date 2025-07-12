@@ -4,6 +4,7 @@ Main analysis pipeline for logits study
 
 import os
 import json
+import jsonlines
 import numpy as np
 import torch
 from typing import Dict, List, Any, Tuple
@@ -232,94 +233,6 @@ class LogitsAnalyzer:
         
         return analysis_results
     
-    def create_visualizations(self, analysis_results: Dict[str, Any], all_logits: Dict[str, List[Tuple[np.ndarray, List[str], Dict[str, Any]]]]):
-        """
-        Create all visualizations
-        
-        Args:
-            analysis_results: Results from analyze_target_tokens
-            all_logits: Raw logits data
-        """
-        print("\\nCreating visualizations...")
-        
-        # Model comparison
-        if analysis_results['model_comparison']:
-            self.visualizer.plot_model_comparison(
-                analysis_results['model_comparison'],
-                "Average Target Token Probability"
-            )
-        
-        # Level analysis - reorganize data for visualization
-        level_viz_data = {}
-        for level, level_data in analysis_results['level_analysis'].items():
-            for model, token_data in level_data.items():
-                for token, prob in token_data.items():
-                    if token not in level_viz_data:
-                        level_viz_data[token] = {}
-                    if level not in level_viz_data[token]:
-                        level_viz_data[token][level] = {}
-                    level_viz_data[token][level][model] = prob
-        
-        # Create level analysis plot for each token
-        for token in TARGET_TOKENS:
-            if token in level_viz_data:
-                token_level_data = {}
-                for level in range(1, 6):
-                    if level in level_viz_data[token]:
-                        token_level_data[level] = level_viz_data[token][level]
-                
-                if token_level_data:
-                    # Average across models for this token
-                    avg_level_data = {}
-                    for level, model_data in token_level_data.items():
-                        avg_level_data[level] = np.mean(list(model_data.values()))
-                    
-                    # Add to level analysis data
-                    if not hasattr(self, '_level_plot_data'):
-                        self._level_plot_data = {}
-                    self._level_plot_data[token] = avg_level_data
-        
-        if hasattr(self, '_level_plot_data'):
-            # Reorganize for plotting
-            plot_level_data = {}
-            for level in range(1, 6):
-                plot_level_data[level] = {}
-                for token, level_data in self._level_plot_data.items():
-                    if level in level_data:
-                        plot_level_data[level][token] = level_data[level]
-            
-            self.visualizer.plot_level_analysis(plot_level_data, "Average Target Token Probability")
-        
-        # Correctness analysis
-        if 'correct' in analysis_results['correctness_analysis'] and 'incorrect' in analysis_results['correctness_analysis']:
-            # Reorganize data
-            correctness_viz_data = {True: {}, False: {}}
-            
-            for token in TARGET_TOKENS:
-                correct_probs = []
-                incorrect_probs = []
-                
-                for model in self.models.keys():
-                    if model in analysis_results['correctness_analysis']['correct']:
-                        if token in analysis_results['correctness_analysis']['correct'][model]:
-                            correct_probs.append(analysis_results['correctness_analysis']['correct'][model][token])
-                    
-                    if model in analysis_results['correctness_analysis']['incorrect']:
-                        if token in analysis_results['correctness_analysis']['incorrect'][model]:
-                            incorrect_probs.append(analysis_results['correctness_analysis']['incorrect'][model][token])
-                
-                if correct_probs:
-                    correctness_viz_data[True][token] = np.mean(correct_probs)
-                if incorrect_probs:
-                    correctness_viz_data[False][token] = np.mean(incorrect_probs)
-            
-            self.visualizer.plot_correctness_comparison(correctness_viz_data, "Average Target Token Probability")
-        
-        # Create dashboard
-        self.visualizer.create_interactive_dashboard(analysis_results)
-        
-        print(f"All visualizations saved to {DATA_CONFIG['output_dir']}")
-    
     def run_full_analysis(self, model_names: List[str] = None, data_file: str = None, 
                          generate_predictions: bool = True):
         """
@@ -358,7 +271,7 @@ class LogitsAnalyzer:
                 self.data_processor.add_correctness_from_predictions(predictions)
                 
                 # Save predictions and evaluations
-                eval_file = f"{DATA_CONFIG['output_dir']}/predictions_evaluation.json"
+                eval_file = f"{DATA_CONFIG['output_dir']}/predictions_evaluation.jsonl"
                 os.makedirs(DATA_CONFIG['output_dir'], exist_ok=True)
                 
                 eval_data = {
@@ -377,8 +290,9 @@ class LogitsAnalyzer:
                     ]
                 }
                 
-                with open(eval_file, 'w', encoding='utf-8') as f:
-                    json.dump(eval_data, f, ensure_ascii=False, indent=2)
+                # Save evaluation results as JSONL
+                with jsonlines.open(eval_file, 'w') as writer:
+                    writer.write_all(eval_data['evaluation_results'])
                 
                 print(f"Predictions and evaluations saved to {eval_file}")
                 
@@ -392,21 +306,22 @@ class LogitsAnalyzer:
         # Analyze target tokens
         analysis_results = self.analyze_target_tokens(all_logits)
         
-        # Create visualizations
-        self.create_visualizations(analysis_results, all_logits)
+        # Create visualizations (only heatmaps)
+        self.visualizer.create_all_heatmaps(all_logits, TARGET_TOKENS)
         
         # Save analysis results
-        results_file = f"{DATA_CONFIG['output_dir']}/analysis_results.json"
-        with open(results_file, 'w') as f:
+        results_file = f"{DATA_CONFIG['output_dir']}/analysis_results.jsonl"
+        # Save results as JSONL
+        with jsonlines.open(results_file, 'w') as writer:
             # Convert numpy arrays to lists for JSON serialization
             serializable_results = self._make_json_serializable(analysis_results)
-            json.dump(serializable_results, f, indent=2)
+            writer.write(serializable_results)
         
         print(f"\\n=== Analysis Complete ===")
         print(f"Results saved to {DATA_CONFIG['output_dir']}")
         print(f"Open {DATA_CONFIG['output_dir']}/dashboard.html to view the dashboard")
         if generate_predictions:
-            print(f"Prediction evaluations available in {DATA_CONFIG['output_dir']}/predictions_evaluation.json")
+            print(f"Prediction evaluations available in {DATA_CONFIG['output_dir']}/predictions_evaluation.jsonl")
     
     def _make_json_serializable(self, obj):
         """Convert numpy arrays and other non-serializable objects to JSON-compatible types"""
@@ -443,8 +358,9 @@ class LogitsAnalyzer:
         for item in tqdm(data, desc=f"Predicting with {model_name}"):
             query = item['query']
             
-            # 构造输入文本
-            input_text = f"Question: {query}\nAnswer:"
+            # 构造输入文本 (添加system prompt)
+            system_prompt = "Please reason step by step, and put your final answer within \\boxed{}"
+            input_text = f"System: {system_prompt}\nQuestion: {query}\nAnswer:"
             
             try:
                 # 生成回答
