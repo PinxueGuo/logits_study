@@ -30,34 +30,43 @@ def run_analysis(models=None, data_file=None):
         else:
             results = analyzer.run_full_analysis(data_file=data_file)
         
-        print("\nAnalysis completed successfully!")
+        print("\\nAnalysis completed successfully!")
         return results
         
     except Exception as e:
         print(f"Error during analysis: {e}")
-        print("\nIf you're running this for the first time, the model paths might need to be adjusted.")
-        print("Check config.py and update the model paths to match your system.")
         return None
+            analyzer.run_full_analysis(data_file=data_file, generate_predictions=generate_predictions)
+    except Exception as e:
+        print(f"Analysis failed: {e}")
+        print("\\nIf you're running this for the first time, the model paths might need to be adjusted.")
+        print("Check config.py and update the model paths to match your system.")
 
 def main():
-    parser = argparse.ArgumentParser(description="LLM Logits Entropy Analysis Tool")
+    parser = argparse.ArgumentParser(description="LLM Logits Analysis Tool")
     parser.add_argument("--setup", action="store_true", help="Set up the environment")
     parser.add_argument("--run", action="store_true", help="Run analysis")
     parser.add_argument("--models", type=str, help="Comma-separated list of models to analyze (baseline,sft,rl)")
     parser.add_argument("--data", type=str, help="Path to data file")
-    parser.add_argument("--all", action="store_true", help="Run complete pipeline (setup + analysis)")
+    parser.add_argument("--all", action="store_true", help="Run complete pipeline (setup + sample + analysis)")
+    parser.add_argument("--no-predictions", action="store_true", help="Skip prediction generation (only analyze logits)")
     
     args = parser.parse_args()
     
+    generate_predictions = not args.no_predictions
+    
     if args.all:
         setup_environment()
-        run_analysis(args.models, args.data)
+        run_analysis(args.models, args.data, generate_predictions)
     else:
         if args.setup:
             setup_environment()
         
         if args.run:
-            run_analysis(args.models, args.data)
+            run_analysis(args.models, args.data, generate_predictions)
+    
+    if not any([args.setup, args.run, args.all]):
+        parser.print_help()
 
 if __name__ == "__main__":
     main()

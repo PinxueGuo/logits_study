@@ -1,9 +1,10 @@
 """
-Main analysis pipeline for logits study - Token-level entropy analysis
+Main analysis pipeline for logits study
 """
 
 import os
 import json
+import jsonlines
 import numpy as np
 import torch
 from typing import Dict, List, Any, Tuple
@@ -94,7 +95,7 @@ class LogitsAnalyzer:
         all_results = {}
         
         for model_name, model in self.models.items():
-            print(f"\nExtracting logits for {model_name}...")
+            print(f"\\nExtracting logits for {model_name}...")
             
             cache_file = f"{DATA_CONFIG['cache_dir']}/{model_name}_logits.pkl"
             
@@ -260,13 +261,15 @@ class LogitsAnalyzer:
         
         return analysis_results
     
-    def run_full_analysis(self, model_names: List[str] = None, data_file: str = None):
+    def run_full_analysis(self, model_names: List[str] = None, data_file: str = None, 
+                         generate_predictions: bool = True):
         """
         Run the complete analysis pipeline
         
         Args:
             model_names: List of model names to analyze
             data_file: Path to data file
+            generate_predictions: Whether to generate new predictions or use cached
         """
         print("Starting logits study analysis...")
         
@@ -275,15 +278,15 @@ class LogitsAnalyzer:
         self.load_data(data_file)
         
         # Extract logits for all models
-        print("\nExtracting logits...")
+        print("\\nExtracting logits...")
         all_logits = self.extract_all_logits(save_cache=True)
         
         # Analyze entropy per query
-        print("\nAnalyzing entropy per token position...")
+        print("\\nAnalyzing entropy per token position...")
         entropy_results = self.analyze_entropy_per_query(all_logits)
         
         # Generate visualizations
-        print("\nGenerating visualizations...")
+        print("\\nGenerating visualizations...")
         self.visualizer.create_entropy_heatmaps(entropy_results)
         
         # Save results
@@ -293,8 +296,8 @@ class LogitsAnalyzer:
             serializable_results = self._make_json_serializable(entropy_results)
             json.dump(serializable_results, f, indent=2, ensure_ascii=False)
         
-        print(f"\nAnalysis complete! Results saved to {results_file}")
-        print("\nSummary statistics:")
+        print(f"\\nAnalysis complete! Results saved to {results_file}")
+        print("\\nSummary statistics:")
         for model, stats in entropy_results['summary_stats'].items():
             print(f"  {model}: mean={stats['mean_entropy']:.3f}, std={stats['std_entropy']:.3f}")
         
@@ -312,3 +315,220 @@ class LogitsAnalyzer:
             return float(obj)
         else:
             return obj
+        
+        Args:
+            model_names: List of model names to analyze
+            data_file: Path to data file
+            generate_predictions: Whether to generate model predictions for correctness evaluation
+        """
+        print("=== Starting Logits Analysis ===")
+        
+        # Load data
+        self.load_data(data_file)
+        
+        # Load models
+        self.load_models(model_names)
+        
+        if not self.models:
+            print("No models loaded successfully. Exiting.")
+            return
+        
+        # Generate predictions and evaluate correctness if requested
+        if generate_predictions and self.models:
+            print("\\n=== Generating Predictions for Correctness Evaluation ===")
+            
+            # Use the first available model for prediction generation
+            # (You can modify this to generate predictions for all models)
+            prediction_model = list(self.models.keys())[0]
+            print(f"Using {prediction_model} for prediction generation...")
+            
+            try:
+                predictions = self.generate_model_predictions(prediction_model, self.data_processor.data)
+                
+                # Evaluate correctness and update data
+                self.data_processor.add_correctness_from_predictions(predictions)
+                
+                # Save predictions and evaluations
+                eval_file = f"{DATA_CONFIG['output_dir']}/predictions_evaluation.jsonl"
+                os.makedirs(DATA_CONFIG['output_dir'], exist_ok=True)
+                
+                eval_data = []
+                for item in self.data_processor.data:
+                    eval_entry = {
+                        'query': item['query'],
+                        'ground_truth': item['answer'],
+                        'prediction': item.get('prediction', ''),
+                        'extracted_answer': item.get('extracted_answer', ''),
+                        'is_correct': item.get('is_correct', False),
+                        'explanation': item.get('comparison_explanation', '')
+                    }
+                    eval_data.append(eval_entry)
+                
+                # Save evaluation results as JSONL
+                with jsonlines.open(eval_file, 'w') as writer:
+                    writer.write_all(eval_data)
+                
+                print(f"Predictions and evaluations saved to {eval_file}")
+                
+            except Exception as e:
+                print(f"Warning: Failed to generate predictions: {e}")
+                print("Continuing with logits analysis...")
+        
+        # Extract logits
+        all_logits = self.extract_all_logits()
+        
+        # Analyze target tokens
+        analysis_results = self.analyze_target_tokens(all_logits)
+        
+        # Create entropy visualizations for each query
+        self.create_entropy_heatmaps(all_logits)
+        
+        # Save analysis results
+        results_file = f"{DATA_CONFIG['output_dir']}/analysis_results.jsonl"
+        # Save results as JSONL
+        with jsonlines.open(results_file, 'w') as writer:
+            # Convert numpy arrays to lists for JSON serialization
+            serializable_results = self._make_json_serializable(analysis_results)
+            writer.write(serializable_results)
+        
+        print(f"\\n=== Analysis Complete ===")
+        print(f"Results saved to {DATA_CONFIG['output_dir']}")
+        print(f"Open {DATA_CONFIG['output_dir']}/dashboard.html to view the dashboard")
+        if generate_predictions:
+            print(f"Prediction evaluations available in {DATA_CONFIG['output_dir']}/predictions_evaluation.jsonl")
+    
+    def _make_json_serializable(self, obj):
+        """Convert numpy arrays and other non-serializable objects to JSON-compatible types"""
+        if isinstance(obj, dict):
+            return {k: self._make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (np.integer, np.floating)):
+            return float(obj)
+        else:
+            return obj
+    
+    def generate_model_predictions(self, model_name: str, data: List[Dict[str, Any]]) -> List[str]:
+        """
+        使用指定模型生成预测答案
+        
+        Args:
+            model_name: 模型名称
+            data: 输入数据列表
+            
+        Returns:
+            预测答案列表
+        """
+        if model_name not in self.models:
+            raise ValueError(f"Model {model_name} not loaded")
+        
+        model = self.models[model_name]
+        predictions = []
+        
+        print(f"Generating predictions with {model_name}...")
+        
+        for item in tqdm(data, desc=f"Predicting with {model_name}"):
+            query = item['query']
+            
+            # 构造输入文本 (添加system prompt)
+            system_prompt = "Please reason step by step, and put your final answer within \\boxed{}"
+            input_text = f"System: {system_prompt}\nQuestion: {query}\nAnswer:"
+            
+            try:
+                # 生成回答
+                inputs = model.tokenizer(
+                    input_text,
+                    return_tensors="pt",
+                    max_length=ANALYSIS_CONFIG['max_length'],
+                    truncation=True
+                ).to(model.device)
+                
+                with torch.no_grad():
+                    outputs = model.model.generate(
+                        **inputs,
+                        max_new_tokens=512,
+                        do_sample=True,
+                        temperature=0.7,
+                        pad_token_id=model.tokenizer.eos_token_id
+                    )
+                
+                # 解码生成的文本
+                generated_text = model.tokenizer.decode(
+                    outputs[0][inputs['input_ids'].shape[1]:], 
+                    skip_special_tokens=True
+                )
+                
+                predictions.append(generated_text)
+                
+            except Exception as e:
+                print(f"Error generating prediction for item: {e}")
+                predictions.append("")  # 添加空预测以保持索引一致
+        
+        return predictions
+    
+    def create_entropy_heatmaps(self, all_logits: Dict[str, List[Tuple[np.ndarray, List[str], Dict[str, Any]]]]):
+        """
+        为每个query创建entropy对比热力图
+        
+        Args:
+            all_logits: 所有模型的logits结果
+        """
+        print("Creating entropy heatmaps for each query...")
+        
+        # 按query组织数据
+        query_data = {}
+        
+        for model_name, results in all_logits.items():
+            for logits, tokens, metadata in results:
+                query = metadata.get('query', 'unknown')
+                if query not in query_data:
+                    query_data[query] = {}
+                
+                # 计算entropy
+                entropy = self.models[model_name].calculate_entropy(logits)
+                
+                # 找到答案部分的起始位置
+                answer_text = metadata.get('answer', '')
+                full_text = f"Query: {query}\nAnswer: {answer_text}"
+                
+                # 估算答案在tokens中的位置
+                answer_start_ratio = (len(f"Query: {query}\nAnswer: ") / len(full_text))
+                answer_start_pos = int(answer_start_ratio * len(tokens))
+                
+                # 提取答案部分的entropy
+                answer_entropy = entropy[answer_start_pos:] if answer_start_pos < len(entropy) else entropy
+                
+                # 找到标志词位置
+                target_positions = self.models[model_name].find_target_token_positions(tokens, TARGET_TOKENS)
+                answer_target_positions = {}
+                for token, positions in target_positions.items():
+                    answer_positions = [pos - answer_start_pos for pos in positions if pos >= answer_start_pos]
+                    if answer_positions:
+                        answer_target_positions[token] = answer_positions
+                
+                query_data[query][model_name] = {
+                    'entropy': answer_entropy,
+                    'tokens': tokens[answer_start_pos:],
+                    'target_positions': answer_target_positions,
+                    'metadata': metadata
+                }
+        
+        # 为每个query创建热力图
+        for query_idx, (query, models_data) in enumerate(query_data.items()):
+            self.visualizer.create_entropy_comparison_heatmap(
+                query, models_data, query_idx, TARGET_TOKENS
+            )
+
+if __name__ == "__main__":
+    analyzer = LogitsAnalyzer()
+    
+    # Run analysis with sample models (you can modify this)
+    # For testing, we'll just use the first model if others are not available
+    try:
+        analyzer.run_full_analysis(['baseline'])  # Start with just one model for testing
+    except Exception as e:
+        print(f"Error during analysis: {e}")
+        print("This might be because the model paths are not accessible in this environment.")
+        print("Please modify the model paths in config.py to match your actual model locations.")
