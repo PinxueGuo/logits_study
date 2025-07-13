@@ -17,24 +17,6 @@ def setup_environment():
     
     print("Environment setup complete!")
 
-def create_sample_data():
-    """Check if data file exists, skip creation if it does"""
-    data_file = "data/logits_study_data.jsonl"
-    
-    if os.path.exists(data_file):
-        print(f"Data file {data_file} already exists, skipping creation.")
-        return
-    
-    # Only create sample data if the actual data file doesn't exist
-    from data_processor import create_sample_data
-    
-    data_dir = Path("data")
-    data_dir.mkdir(exist_ok=True)
-    
-    create_sample_data("data/queries.jsonl", num_samples=20)
-    print("Sample data created!")
-    print("Note: Please replace with your actual data file: data/logits_study_data.jsonl")
-
 def run_analysis(models=None, data_file=None, generate_predictions=True):
     """Run the logits analysis"""
     from analyzer import LogitsAnalyzer
@@ -55,7 +37,6 @@ def run_analysis(models=None, data_file=None, generate_predictions=True):
 def main():
     parser = argparse.ArgumentParser(description="LLM Logits Analysis Tool")
     parser.add_argument("--setup", action="store_true", help="Set up the environment")
-    parser.add_argument("--create-sample", action="store_true", help="Create sample data")
     parser.add_argument("--run", action="store_true", help="Run analysis")
     parser.add_argument("--models", type=str, help="Comma-separated list of models to analyze (baseline,sft,rl)")
     parser.add_argument("--data", type=str, help="Path to data file")
@@ -68,19 +49,15 @@ def main():
     
     if args.all:
         setup_environment()
-        create_sample_data()
         run_analysis(args.models, args.data, generate_predictions)
     else:
         if args.setup:
             setup_environment()
         
-        if args.create_sample:
-            create_sample_data()
-        
         if args.run:
             run_analysis(args.models, args.data, generate_predictions)
     
-    if not any([args.setup, args.create_sample, args.run, args.all]):
+    if not any([args.setup, args.run, args.all]):
         parser.print_help()
 
 if __name__ == "__main__":

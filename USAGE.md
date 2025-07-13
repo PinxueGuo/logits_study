@@ -15,19 +15,6 @@ make setup
 uv sync
 ```
 
-### 2. 运行分析
-
-```bash
-# 完整演示（包含示例数据）
-make demo
-
-# 使用真实数据运行分析
-make run
-
-# 启动Jupyter notebook进行交互式分析
-make jupyter
-```
-
 ## 详细使用说明
 
 ### 配置模型路径

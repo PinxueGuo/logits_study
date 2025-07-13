@@ -136,6 +136,33 @@ class LogitsExtractor:
         
         return target_probs
     
+    def calculate_entropy(self, logits: np.ndarray) -> np.ndarray:
+        """
+        Calculate entropy from logits for each token position
+        
+        Args:
+            logits: Logits array (seq_len, vocab_size)
+            
+        Returns:
+            Entropy array (seq_len,) - entropy at each token position
+        """
+        # Convert to tensor for softmax calculation
+        logits_tensor = torch.tensor(logits, dtype=torch.float32)
+        
+        # Apply softmax to get probabilities
+        probabilities = torch.softmax(logits_tensor, dim=-1)
+        
+        # Calculate entropy: H = -sum(p * log(p))
+        # Add small epsilon to avoid log(0)
+        epsilon = 1e-12
+        probabilities = torch.clamp(probabilities, min=epsilon, max=1.0)
+        
+        # Calculate entropy for each position
+        log_probs = torch.log(probabilities)
+        entropy = -torch.sum(probabilities * log_probs, dim=-1)
+        
+        return entropy.numpy()
+    
     def batch_extract_logits(self, texts: List[str], max_length: int = 2048, 
                            batch_size: int = 4) -> List[Tuple[np.ndarray, List[str]]]:
         """
@@ -159,3 +186,33 @@ class LogitsExtractor:
                 results.append((logits, tokens))
         
         return results
+    
+    def extract_answer_entropy(self, text: str, answer_start_marker: str = None, 
+                              max_length: int = 2048) -> Tuple[np.ndarray, List[str], int]:
+        """
+        Extract entropy specifically for the answer portion of text
+        
+        Args:
+            text: Full input text (question + answer)
+            answer_start_marker: Marker to identify where answer starts (e.g., "A:")
+            max_length: Maximum sequence length
+            
+        Returns:
+            Tuple of (entropy_array, tokens, answer_start_position)
+        """
+        # Get logits and tokens for full text
+        logits, tokens = self.extract_logits(text, max_length)
+        
+        # Calculate entropy for all positions
+        entropy = self.calculate_entropy(logits)
+        
+        # Find answer start position if marker provided
+        answer_start_pos = 0
+        if answer_start_marker:
+            # Convert full text to tokens to find marker position
+            for i, token in enumerate(tokens):
+                if answer_start_marker.lower() in token.lower():
+                    answer_start_pos = i
+                    break
+        
+        return entropy, tokens, answer_start_pos

@@ -158,14 +158,21 @@ class LogitsAnalyzer:
             for token in TARGET_TOKENS:
                 # Try different variations of the token
                 variations = [token, token.capitalize(), f" {token}", f"Ġ{token}", f"▁{token}"]
+                found = False
                 for var in variations:
                     try:
-                        token_id = model.tokenizer.encode(var, add_special_tokens=False)
-                        if token_id:
-                            target_token_ids[model_name][token] = token_id[0]
+                        token_ids = model.tokenizer.encode(var, add_special_tokens=False)
+                        if token_ids:
+                            target_token_ids[model_name][token] = token_ids[0]
+                            print(f"Found token '{token}' for {model_name}: ID {token_ids[0]} (variation: '{var}')")
+                            found = True
                             break
                     except:
                         continue
+                
+                if not found:
+                    print(f"Warning: Could not find token '{token}' for {model_name}")
+                    target_token_ids[model_name][token] = None
         
         # Analyze each model
         for model_name, results in all_logits.items():
@@ -182,27 +189,30 @@ class LogitsAnalyzer:
                     tokens, TARGET_TOKENS
                 )
                 
+                print(f"Processing item for {model_name}: found {sum(len(pos) for pos in target_positions.values())} target tokens")
+                
                 # Get probabilities for target tokens
-                if model_name in target_token_ids:
-                    token_ids = [target_token_ids[model_name].get(token, 0) for token in TARGET_TOKENS]
-                    probs = self.models[model_name].get_token_probabilities(logits, token_ids)
-                    
-                    # Store probabilities
-                    for i, token in enumerate(TARGET_TOKENS):
-                        if token in target_positions and target_positions[token]:
-                            # Average probability around target positions
-                            pos_probs = []
-                            for pos in target_positions[token]:
-                                if pos < len(probs):
-                                    pos_probs.append(probs[pos, i])
+                for token in TARGET_TOKENS:
+                    token_id = target_token_ids[model_name].get(token)
+                    if token_id is not None and token in target_positions and target_positions[token]:
+                        # Get probabilities for this specific token
+                        probs = self.models[model_name].get_token_probabilities(logits, [token_id])
+                        
+                        # Extract probabilities at target positions
+                        token_probs = []
+                        for pos in target_positions[token]:
+                            if pos < len(probs):
+                                token_probs.append(probs[pos, 0])  # First column for our token
+                        
+                        if token_probs:
+                            avg_prob = np.mean(token_probs)
+                            model_token_probs[token].extend(token_probs)
+                            level_token_probs[metadata['level']][token].extend(token_probs)
                             
-                            if pos_probs:
-                                avg_prob = np.mean(pos_probs)
-                                model_token_probs[token].append(avg_prob)
-                                level_token_probs[metadata['level']][token].append(avg_prob)
-                                
-                                if 'is_correct' in metadata:
-                                    correct_token_probs[metadata['is_correct']][token].append(avg_prob)
+                            if 'is_correct' in metadata:
+                                correct_token_probs[metadata['is_correct']][token].extend(token_probs)
+                            
+                            print(f"  {token}: {len(token_probs)} occurrences, avg prob: {avg_prob:.4f}")
             
             # Store results
             analysis_results['model_comparison'][model_name] = {
@@ -274,25 +284,21 @@ class LogitsAnalyzer:
                 eval_file = f"{DATA_CONFIG['output_dir']}/predictions_evaluation.jsonl"
                 os.makedirs(DATA_CONFIG['output_dir'], exist_ok=True)
                 
-                eval_data = {
-                    'model_used': prediction_model,
-                    'total_samples': len(predictions),
-                    'predictions': [
-                        {
-                            'query': item['query'],
-                            'ground_truth': item['answer'],
-                            'prediction': item['prediction'],
-                            'extracted_answer': item['extracted_answer'],
-                            'is_correct': item['is_correct'],
-                            'explanation': item['comparison_explanation']
-                        }
-                        for item in self.data_processor.data
-                    ]
-                }
+                eval_data = []
+                for item in self.data_processor.data:
+                    eval_entry = {
+                        'query': item['query'],
+                        'ground_truth': item['answer'],
+                        'prediction': item.get('prediction', ''),
+                        'extracted_answer': item.get('extracted_answer', ''),
+                        'is_correct': item.get('is_correct', False),
+                        'explanation': item.get('comparison_explanation', '')
+                    }
+                    eval_data.append(eval_entry)
                 
                 # Save evaluation results as JSONL
                 with jsonlines.open(eval_file, 'w') as writer:
-                    writer.write_all(eval_data['evaluation_results'])
+                    writer.write_all(eval_data)
                 
                 print(f"Predictions and evaluations saved to {eval_file}")
                 
@@ -306,8 +312,8 @@ class LogitsAnalyzer:
         # Analyze target tokens
         analysis_results = self.analyze_target_tokens(all_logits)
         
-        # Create visualizations (only heatmaps)
-        self.visualizer.create_all_heatmaps(all_logits, TARGET_TOKENS)
+        # Create entropy visualizations for each query
+        self.create_entropy_heatmaps(all_logits)
         
         # Save analysis results
         results_file = f"{DATA_CONFIG['output_dir']}/analysis_results.jsonl"
@@ -393,6 +399,59 @@ class LogitsAnalyzer:
                 predictions.append("")  # 添加空预测以保持索引一致
         
         return predictions
+    
+    def create_entropy_heatmaps(self, all_logits: Dict[str, List[Tuple[np.ndarray, List[str], Dict[str, Any]]]]):
+        """
+        为每个query创建entropy对比热力图
+        
+        Args:
+            all_logits: 所有模型的logits结果
+        """
+        print("Creating entropy heatmaps for each query...")
+        
+        # 按query组织数据
+        query_data = {}
+        
+        for model_name, results in all_logits.items():
+            for logits, tokens, metadata in results:
+                query = metadata.get('query', 'unknown')
+                if query not in query_data:
+                    query_data[query] = {}
+                
+                # 计算entropy
+                entropy = self.models[model_name].calculate_entropy(logits)
+                
+                # 找到答案部分的起始位置
+                answer_text = metadata.get('answer', '')
+                full_text = f"Query: {query}\nAnswer: {answer_text}"
+                
+                # 估算答案在tokens中的位置
+                answer_start_ratio = (len(f"Query: {query}\nAnswer: ") / len(full_text))
+                answer_start_pos = int(answer_start_ratio * len(tokens))
+                
+                # 提取答案部分的entropy
+                answer_entropy = entropy[answer_start_pos:] if answer_start_pos < len(entropy) else entropy
+                
+                # 找到标志词位置
+                target_positions = self.models[model_name].find_target_token_positions(tokens, TARGET_TOKENS)
+                answer_target_positions = {}
+                for token, positions in target_positions.items():
+                    answer_positions = [pos - answer_start_pos for pos in positions if pos >= answer_start_pos]
+                    if answer_positions:
+                        answer_target_positions[token] = answer_positions
+                
+                query_data[query][model_name] = {
+                    'entropy': answer_entropy,
+                    'tokens': tokens[answer_start_pos:],
+                    'target_positions': answer_target_positions,
+                    'metadata': metadata
+                }
+        
+        # 为每个query创建热力图
+        for query_idx, (query, models_data) in enumerate(query_data.items()):
+            self.visualizer.create_entropy_comparison_heatmap(
+                query, models_data, query_idx, TARGET_TOKENS
+            )
 
 if __name__ == "__main__":
     analyzer = LogitsAnalyzer()

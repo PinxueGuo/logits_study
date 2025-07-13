@@ -1,0 +1,4 @@
+{"query": "将12个相同的小球放入编号为1、2、3、4的盒子中，每个盒子中至少有一个小球的不同放法有多少种？", "answer": "165种", "level": 3}
+{"query": "已知 $x$ 的一次多项式 $D = \\begin{vmatrix} -1 & 0 & x & 1 \\ 1 & 1 & -1 & -1 \\ 1 & -1 & 1 & -1 \\ 1 & -1 & -1 & 1 \\end{vmatrix}$，求该多项式中一次项的系数。", "answer": "-4", "level": 3}
+{"query": "若xlog₂3=1，求3^x +3^{-x}的值。", "answer": "5/2", "level": 1}
+{"query": "若x，y满足约束条件\\begin{cases} 0 ≤ 2x + y ≤ 6 \\ 3 ≤ x - y ≤ 6 \\end{cases}，求z = x - 2y的最大值。", "answer": "10", "level": 2}

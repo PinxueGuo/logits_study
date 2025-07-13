@@ -9,13 +9,13 @@ wheels/
 agent_history.gif
 static/browser_history/*.gif
 
+.DS_Store
+
 # Virtual environments
 .venv
 venv/
 uv.lock
 
-# results
+# data and results
 results/*
 cache/*
-
-.DS_Store

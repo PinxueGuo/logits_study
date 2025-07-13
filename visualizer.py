@@ -173,3 +173,111 @@ class LogitsVisualizer:
                     is_correct=is_correct,
                     target_tokens=target_tokens
                 )
+    
+    def create_entropy_comparison_heatmap(self, query: str, models_data: Dict[str, Any], 
+                                        query_idx: int, target_tokens: List[str]):
+        """
+        为单个query创建模型间entropy对比热力图
+        
+        Args:
+            query: 查询文本
+            models_data: 各模型的数据 {model_name: {entropy, tokens, target_positions, metadata}}
+            query_idx: 查询索引
+            target_tokens: 目标tokens列表
+        """
+        if not models_data:
+            return
+        
+        # 准备数据
+        model_names = list(models_data.keys())
+        max_length = max(len(data['entropy']) for data in models_data.values())
+        
+        # 创建归一化位置数组 (0-1)
+        normalized_positions = np.linspace(0, 1, max_length)
+        
+        # 准备热力图数据：每行是一个模型的entropy
+        heatmap_data = []
+        model_labels = []
+        target_markers = []  # 存储标志词位置
+        
+        for model_name in model_names:
+            data = models_data[model_name]
+            entropy = data['entropy']
+            
+            # 插值到统一长度
+            if len(entropy) != max_length:
+                indices = np.linspace(0, len(entropy)-1, max_length)
+                entropy_interp = np.interp(indices, np.arange(len(entropy)), entropy)
+            else:
+                entropy_interp = entropy
+            
+            heatmap_data.append(entropy_interp)
+            model_labels.append(model_name)
+            
+            # 收集标志词位置
+            model_markers = []
+            for token, positions in data['target_positions'].items():
+                for pos in positions:
+                    if pos < len(entropy):
+                        # 转换为归一化位置
+                        norm_pos = pos / (len(entropy) - 1) if len(entropy) > 1 else 0
+                        model_markers.append((norm_pos, token))
+            target_markers.append(model_markers)
+        
+        # 创建图形
+        plt.figure(figsize=(15, 8))
+        
+        # 创建热力图
+        heatmap_data = np.array(heatmap_data)
+        
+        # 使用自定义colormap强调差异
+        im = plt.imshow(heatmap_data, aspect='auto', cmap='viridis', 
+                       extent=[0, 1, len(model_names)-0.5, -0.5])
+        
+        # 添加颜色条
+        cbar = plt.colorbar(im, label='Entropy')
+        
+        # 标记标志词位置
+        colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'brown', 'gray', 'cyan']
+        token_color_map = {token: colors[i % len(colors)] for i, token in enumerate(target_tokens)}
+        
+        for model_idx, markers in enumerate(target_markers):
+            for norm_pos, token in markers:
+                x_pos = norm_pos
+                y_pos = model_idx
+                
+                # 画标记点
+                plt.scatter(x_pos, y_pos, color=token_color_map[token], 
+                          s=100, marker='|', linewidth=3, alpha=0.8)
+                
+                # 添加文本标签
+                plt.text(x_pos, y_pos - 0.15, token, fontsize=8, 
+                        color=token_color_map[token], ha='center', va='top',
+                        fontweight='bold')
+        
+        # 设置标签和标题
+        plt.yticks(range(len(model_names)), model_names)
+        plt.xlabel('Normalized Answer Position (0=start, 1=end)')
+        plt.ylabel('Models')
+        
+        # 截断query文本用于标题
+        short_query = query[:60] + "..." if len(query) > 60 else query
+        plt.title(f'Entropy Comparison - Query {query_idx + 1}: {short_query}')
+        
+        # 添加图例
+        legend_elements = [plt.Line2D([0], [0], marker='|', color='w', 
+                                    markerfacecolor=token_color_map[token], 
+                                    markersize=10, label=token, linewidth=0)
+                         for token in target_tokens if token in token_color_map]
+        
+        if legend_elements:
+            plt.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1.15, 1))
+        
+        plt.tight_layout()
+        
+        # 保存文件
+        filename = f"entropy_comparison_query_{query_idx + 1}.png"
+        plt.savefig(f"{self.output_dir}/{filename}", dpi=self.dpi, bbox_inches='tight')
+        plt.close()
+        
+        print(f"Saved entropy heatmap: {filename}")
