@@ -63,8 +63,11 @@ class LogitsExtractor:
         input_ids = inputs['input_ids'].to(self.device)
         attention_mask = inputs['attention_mask'].to(self.device)
         
-        # Get tokens for reference
-        tokens = self.tokenizer.convert_ids_to_tokens(input_ids[0])
+        # Get tokens for reference - decode them properly to handle Chinese characters
+        tokens = []
+        for token_id in input_ids[0]:
+            token = self.tokenizer.decode([token_id], skip_special_tokens=False)
+            tokens.append(token)
         
         with torch.no_grad():
             outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)

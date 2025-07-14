@@ -311,12 +311,21 @@ class LogitsAnalyzer:
         print("\nGenerating visualizations...")
         self.visualizer.create_entropy_heatmaps(entropy_results)
         
-        # Save results
-        results_file = f"{DATA_CONFIG['output_dir']}/entropy_analysis_results.json"
+        # Save results as JSONL format
+        results_file = f"{DATA_CONFIG['output_dir']}/entropy_analysis_results.jsonl"
         with open(results_file, 'w', encoding='utf-8') as f:
             # Convert numpy arrays to lists for JSON serialization
             serializable_results = self._make_json_serializable(entropy_results)
-            json.dump(serializable_results, f, indent=2, ensure_ascii=False)
+            
+            # Write each query as a separate line in JSONL format
+            for query_data in serializable_results['query_entropy_data']:
+                json.dump(query_data, f, ensure_ascii=False)
+                f.write('\n')
+            
+            # Write summary stats as the last line
+            summary_line = {'summary_stats': serializable_results['summary_stats']}
+            json.dump(summary_line, f, ensure_ascii=False)
+            f.write('\n')
         
         print(f"\nAnalysis complete! Results saved to {results_file}")
         print("\nSummary statistics:")
