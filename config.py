@@ -30,7 +30,7 @@ TARGET_TOKENS = ['wait', 'aha', 'check', 'think', 'hmm', 'let', 'actually', 'how
 DATA_CONFIG = {
     'input_file': 'data/logits_study_data_sample4.jsonl',  # Expected format: {'query': str, 'answer': str, 'level': int}
     'output_dir': 'results',
-    'cache_dir': 'cache'
+    'cache_dir': 'results/cache'
 }
 
 # Analysis configuration

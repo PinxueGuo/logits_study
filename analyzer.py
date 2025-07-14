@@ -12,7 +12,7 @@ import pickle
 
 from config import MODELS, TARGET_TOKENS, DATA_CONFIG, ANALYSIS_CONFIG
 from model_loader import LogitsExtractor
-from data_processor import DataProcessor, create_sample_data
+from data_processor import DataProcessor
 from visualizer import LogitsVisualizer
 
 class LogitsAnalyzer:
@@ -63,11 +63,6 @@ class LogitsAnalyzer:
         """
         if data_file is None:
             data_file = DATA_CONFIG['input_file']
-        
-        # Create sample data if file doesn't exist
-        if not os.path.exists(data_file):
-            print(f"Data file {data_file} not found. Creating sample data...")
-            create_sample_data(data_file, num_samples=50)
         
         self.data_processor = DataProcessor(data_file)
         self.data_processor.load_data()

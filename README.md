@@ -5,13 +5,7 @@
 ### 1. 环境设置
 
 ```bash
-# 方法1: 使用setup脚本（推荐）
 ./setup.sh
-
-# 方法2: 使用Makefile
-make setup
-
-# 方法3: 手动设置
 uv sync
 ```
 
@@ -39,7 +33,6 @@ MODELS = {
   "query": "问题内容",
   "answer": "回答内容",
   "level": 1-5,
-  "is_correct": true/false
 }
 ```
 
@@ -69,10 +62,6 @@ from analyzer import LogitsAnalyzer
 analyzer = LogitsAnalyzer()
 analyzer.run_full_analysis(['baseline', 'sft'])
 ```
-
-#### 3. Jupyter Notebook
-
-打开 `logits_analysis_demo.ipynb` 进行交互式分析。
 
 ## 输出结果
 
