@@ -216,3 +216,43 @@ class LogitsExtractor:
                     break
         
         return entropy, tokens, answer_start_pos
+    
+    def generate_answer(self, text: str, max_new_tokens: int = 512) -> str:
+        """
+        Generate answer from the model for given input text
+        
+        Args:
+            text: Input text (question)
+            max_new_tokens: Maximum number of tokens to generate
+            
+        Returns:
+            Generated answer text
+        """
+        try:
+            # Tokenize input
+            inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
+            input_ids = inputs['input_ids'].to(self.device)
+            attention_mask = inputs['attention_mask'].to(self.device)
+            
+            with torch.no_grad():
+                # Generate response
+                outputs = self.model.generate(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=True,
+                    temperature=0.7,
+                    top_p=0.9,
+                    pad_token_id=self.tokenizer.eos_token_id,
+                    eos_token_id=self.tokenizer.eos_token_id
+                )
+                
+                # Decode only the generated part
+                generated_tokens = outputs[0][len(input_ids[0]):]
+                generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+                
+                return generated_text.strip()
+                
+        except Exception as e:
+            print(f"Error generating answer: {e}")
+            return ""

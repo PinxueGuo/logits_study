@@ -111,8 +111,13 @@ class LogitsAnalyzer:
                         max_length=ANALYSIS_CONFIG['max_length']
                     )
                     
-                    # Store with metadata
-                    model_results.append((logits, tokens, item))
+                    # Generate answer from the model
+                    generated_answer = model.generate_answer(full_text)
+                    
+                    # Store with metadata and generated answer
+                    enhanced_metadata = item.copy()
+                    enhanced_metadata['generated_answer'] = generated_answer
+                    model_results.append((logits, tokens, enhanced_metadata))
                     
                 except Exception as e:
                     print(f"Error processing item: {e}")
@@ -163,15 +168,22 @@ class LogitsAnalyzer:
         positions = {token: [] for token in target_tokens}
         
         for i, token in enumerate(tokens):
-            # Clean token (remove special characters)
-            clean_token = token.strip().lower()
+            # Clean token (remove special characters and decode properly)
+            clean_token = token.strip()
+            
+            # Handle different tokenizer prefixes
             if clean_token.startswith('▁'):
                 clean_token = clean_token[1:]
             if clean_token.startswith('Ġ'):
                 clean_token = clean_token[1:]
             
+            # Convert to lowercase for comparison
+            clean_token_lower = clean_token.lower()
+            
             for target in target_tokens:
-                if clean_token == target.lower():
+                target_lower = target.lower()
+                # Exact match or contains match
+                if clean_token_lower == target_lower or target_lower in clean_token_lower:
                     positions[target].append(i)
         
         return positions
@@ -223,12 +235,30 @@ class LogitsAnalyzer:
                 # Find target token positions
                 target_positions = self.find_target_token_positions_in_sequence(tokens, TARGET_TOKENS)
                 
-                # Store model data
+                # Store model data with decoded tokens
+                # Try to decode tokens properly for better readability
+                decoded_tokens = []
+                for token in tokens:
+                    # For better readability, try to decode back to text when possible
+                    try:
+                        if hasattr(self.models[model_name], 'tokenizer'):
+                            # For Qwen tokenizer, handle special tokens
+                            if token.startswith('<') and token.endswith('>'):
+                                decoded_tokens.append(token)  # Keep special tokens as-is
+                            else:
+                                # Try to get the readable token
+                                decoded_tokens.append(token)
+                        else:
+                            decoded_tokens.append(token)
+                    except:
+                        decoded_tokens.append(token)
+                
                 query_data['models'][model_name] = {
                     'entropy': entropy_values,
-                    'tokens': tokens,
+                    'tokens': decoded_tokens,
                     'target_positions': target_positions,
-                    'sequence_length': len(tokens)
+                    'sequence_length': len(tokens),
+                    'generated_answer': metadata.get('generated_answer', '')  # Store generated answer
                 }
                 
                 print(f"Query {query_idx}, Model {model_name}: {len(entropy_values)} positions, "
