@@ -37,10 +37,11 @@ DATA_CONFIG = {
 # Analysis configuration
 ANALYSIS_CONFIG = {
     'max_length': 32*1024,
+    'max_new_tokens': 30*1024,  # Maximum tokens to generate for answers
     'batch_size': 4,
     'device': 'cuda',
     'torch_dtype': 'bfloat16',
-    'context_window': 100,  # Tokens before and after target token to analyze
+    'context_window': 30*1024,  # Tokens before and after target token to analyze
 }
 
 # Visualization configuration

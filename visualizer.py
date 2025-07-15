@@ -119,6 +119,8 @@ class LogitsVisualizer:
         filename = f"entropy_heatmap_query_{query_idx}.png"
         filepath = os.path.join(self.output_dir, filename)
         plt.tight_layout()
+        # Add extra space for the legend
+        plt.subplots_adjust(right=0.75)
         plt.savefig(filepath, dpi=self.dpi, bbox_inches='tight')
         plt.close()
         
@@ -135,12 +137,45 @@ class LogitsVisualizer:
         """
         models = list(query_data['models'].keys())
         
+        # Define different markers and colors for different target tokens
+        marker_styles = ['*', 'o', 's', '^', 'v', '<', '>', 'D', 'P', 'X', 'h', 'H', '+', 'x', 'd']
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan',
+                 'magenta', 'yellow', 'navy', 'lime', 'maroon']
+        
+        # Collect all unique target tokens that have positions
+        all_target_tokens = set()
+        for model_name in models:
+            model_data = query_data['models'][model_name]
+            target_positions = model_data['target_positions']
+            for target_token, positions in target_positions.items():
+                if positions:  # Only include tokens that have positions
+                    all_target_tokens.add(target_token)
+        
+        all_target_tokens = sorted(list(all_target_tokens))
+        
+        # Create a mapping from target tokens to markers and colors
+        token_style_map = {}
+        for i, token in enumerate(all_target_tokens):
+            token_style_map[token] = {
+                'marker': marker_styles[i % len(marker_styles)],
+                'color': colors[i % len(colors)]
+            }
+        
+        # Mark positions for each model and target token
+        legend_handles = []
+        legend_labels = []
+        
         for model_idx, model_name in enumerate(models):
             model_data = query_data['models'][model_name]
             target_positions = model_data['target_positions']
             seq_length = model_data['sequence_length']
             
             for target_token, positions in target_positions.items():
+                if not positions:  # Skip if no positions found
+                    continue
+                    
+                style = token_style_map[target_token]
+                
                 for pos in positions:
                     # Convert position to normalized coordinate
                     if seq_length > 1:
@@ -149,14 +184,20 @@ class LogitsVisualizer:
                         normalized_pos = 0.5
                     
                     # Add marker
-                    ax.plot(normalized_pos, model_idx, 'r*', markersize=8, 
-                           markeredgecolor='white', markeredgewidth=1,
-                           label=target_token if model_idx == 0 and pos == positions[0] else "")
+                    marker_handle = ax.plot(normalized_pos, model_idx, style['marker'], 
+                                          markersize=10, color=style['color'],
+                                          markeredgecolor='white', markeredgewidth=1.5)[0]
+                    
+                    # Add to legend only once per target token
+                    if target_token not in legend_labels:
+                        legend_handles.append(marker_handle)
+                        legend_labels.append(target_token)
         
         # Add legend for target tokens (only if there are any)
-        handles, labels = ax.get_legend_handles_labels()
-        if handles:
-            ax.legend(handles, labels, loc='upper right', bbox_to_anchor=(1.15, 1.0))
+        if legend_handles:
+            ax.legend(legend_handles, legend_labels, loc='center left', 
+                     bbox_to_anchor=(1.0, 0.5), title="Target Tokens",
+                     frameon=True, fancybox=True, shadow=True)
     
     def _create_summary_heatmap(self, entropy_results: Dict[str, Any]):
         """

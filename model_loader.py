@@ -40,189 +40,131 @@ class LogitsExtractor:
         
         print("Model loaded successfully!")
     
-    def extract_logits(self, text: str, max_length: int = 2048) -> Tuple[np.ndarray, List[str]]:
+    def generate_with_logits(self, input_text: str, max_new_tokens: int = 512) -> Tuple[str, np.ndarray, List[str]]:
         """
-        Extract logits for a given text
+        Generate text and extract logits for each generated token
         
         Args:
-            text: Input text
-            max_length: Maximum sequence length
+            input_text: Input text (prompt/question)
+            max_new_tokens: Maximum number of tokens to generate
             
         Returns:
-            Tuple of (logits, tokens)
+            Tuple of (generated_text, logits_array, generated_tokens)
+            - generated_text: The generated response text
+            - logits_array: numpy array of shape (num_generated_tokens, vocab_size)
+            - generated_tokens: List of generated token strings
         """
         # Tokenize input
-        inputs = self.tokenizer(
-            text, 
-            return_tensors="pt", 
-            max_length=max_length, 
-            truncation=True,
-            padding=False
-        )
-        
+        inputs = self.tokenizer(input_text, return_tensors="pt", truncation=True)
         input_ids = inputs['input_ids'].to(self.device)
         attention_mask = inputs['attention_mask'].to(self.device)
         
-        # Get tokens for reference - decode them properly to handle Chinese characters
-        tokens = []
-        for token_id in input_ids[0]:
-            token = self.tokenizer.decode([token_id], skip_special_tokens=False)
-            tokens.append(token)
-        
         with torch.no_grad():
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-            logits = outputs.logits[0].float().cpu().numpy()  # Convert to float32 before numpy
+            # Generate with logits
+            outputs = self.model.generate(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                max_new_tokens=max_new_tokens,
+                output_scores=True,           # 返回每个生成token的logits
+                return_dict_in_generate=True, # 返回字典格式
+                do_sample=False,              # 贪婪解码确保确定性
+                pad_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.tokenizer.eos_token_id
+            )
         
-        return logits, tokens
+        # 获取生成的token序列 (去掉输入部分)
+        generated_token_ids = outputs.sequences[0][input_ids.shape[1]:]
+        generated_text = self.tokenizer.decode(generated_token_ids, skip_special_tokens=True)
+        
+        # 获取每个生成token的logits
+        scores = outputs.scores  # tuple of tensors, 每个tensor shape: [batch_size, vocab_size]
+        
+        if len(scores) == 0:
+            return generated_text, np.array([]), []
+        
+        # 将logits转换为numpy数组
+        logits_list = []
+        generated_tokens = []
+        
+        for i, score in enumerate(scores):
+            if i < len(generated_token_ids):  # 确保索引不越界
+                # 获取当前token的logits
+                token_logits = score[0].float().cpu().numpy()  # shape: (vocab_size,)
+                logits_list.append(token_logits)
+                
+                # 获取对应的token文本
+                token_id = generated_token_ids[i].item()
+                token_text = self.tokenizer.decode([token_id], skip_special_tokens=False)
+                generated_tokens.append(token_text)
+        
+        # 转换为numpy数组
+        logits_array = np.array(logits_list) if logits_list else np.array([])
+        
+        return generated_text, logits_array, generated_tokens
     
-    def find_target_token_positions(self, tokens: List[str], target_tokens: List[str]) -> Dict[str, List[int]]:
+    def calculate_token_entropy(self, logits_array: np.ndarray) -> np.ndarray:
         """
-        Find positions of target tokens in the token sequence
+        Calculate entropy for each generated token from its logits
         
         Args:
-            tokens: List of tokens
-            target_tokens: List of target tokens to find
+            logits_array: numpy array of shape (num_tokens, vocab_size)
             
         Returns:
-            Dictionary mapping token to list of positions
+            Entropy array of shape (num_tokens,) - entropy for each generated token
         """
-        positions = {token: [] for token in target_tokens}
+        if logits_array.size == 0:
+            return np.array([])
         
-        for i, token in enumerate(tokens):
-            # Handle different tokenization formats
-            cleaned_token = token.replace('Ġ', '').replace('▁', '').lower().strip()
-            for target in target_tokens:
-                if cleaned_token == target.lower() or token.lower() == target.lower():
-                    positions[target].append(i)
-        
-        return positions
-    
-    def extract_context_logits(self, logits: np.ndarray, positions: List[int], 
-                             context_window: int = 10) -> np.ndarray:
-        """
-        Extract logits around target token positions
-        
-        Args:
-            logits: Full logits array
-            positions: List of target token positions
-            context_window: Number of tokens before and after to include
-            
-        Returns:
-            Context logits array
-        """
-        context_logits = []
-        seq_len = logits.shape[0]
-        
-        for pos in positions:
-            start = max(0, pos - context_window)
-            end = min(seq_len, pos + context_window + 1)
-            context_logits.append(logits[start:end])
-        
-        return context_logits
-    
-    def get_token_probabilities(self, logits: np.ndarray, token_ids: List[int]) -> np.ndarray:
-        """
-        Get probabilities for specific tokens
-        
-        Args:
-            logits: Logits array (seq_len, vocab_size)
-            token_ids: List of token IDs to get probabilities for
-            
-        Returns:
-            Probabilities array (seq_len, len(token_ids))
-        """
-        # Apply softmax to get probabilities
-        probabilities = torch.softmax(torch.tensor(logits), dim=-1).numpy()
-        
-        # Extract probabilities for target tokens
-        target_probs = probabilities[:, token_ids]
-        
-        return target_probs
-    
-    def calculate_entropy(self, logits: np.ndarray) -> np.ndarray:
-        """
-        Calculate entropy from logits for each token position
-        
-        Args:
-            logits: Logits array (seq_len, vocab_size)
-            
-        Returns:
-            Entropy array (seq_len,) - entropy at each token position
-        """
         # Convert to tensor for softmax calculation
-        logits_tensor = torch.tensor(logits, dtype=torch.float32)
+        logits_tensor = torch.tensor(logits_array, dtype=torch.float32)
         
-        # Apply softmax to get probabilities
-        probabilities = torch.softmax(logits_tensor, dim=-1)
+        # Apply softmax to get probability distribution for each token
+        probabilities = torch.softmax(logits_tensor, dim=-1)  # shape: (num_tokens, vocab_size)
         
-        # Calculate entropy: H = -sum(p * log(p))
-        # Add small epsilon to avoid log(0)
+        # Calculate entropy: H = -sum(p * log(p)) for each token
         epsilon = 1e-12
         probabilities = torch.clamp(probabilities, min=epsilon, max=1.0)
         
-        # Calculate entropy for each position
+        # Calculate entropy for each token position
         log_probs = torch.log(probabilities)
-        entropy = -torch.sum(probabilities * log_probs, dim=-1)
+        entropy = -torch.sum(probabilities * log_probs, dim=-1)  # shape: (num_tokens,)
         
         return entropy.numpy()
     
-    def batch_extract_logits(self, texts: List[str], max_length: int = 2048, 
-                           batch_size: int = 4) -> List[Tuple[np.ndarray, List[str]]]:
+    def analyze_generation_uncertainty(self, input_text: str, max_new_tokens: int = 512) -> Dict:
         """
-        Extract logits for multiple texts in batches
+        Generate text and analyze the uncertainty (entropy) for each generated token
         
         Args:
-            texts: List of input texts
-            max_length: Maximum sequence length
-            batch_size: Batch size for processing
+            input_text: Input prompt/question
+            max_new_tokens: Maximum number of tokens to generate
             
         Returns:
-            List of (logits, tokens) tuples
+            Dictionary containing:
+            - generated_text: The generated response
+            - tokens: List of generated token strings  
+            - entropies: Entropy for each generated token
+            - logits: Raw logits for each generated token
         """
-        results = []
+        # Generate text and get logits
+        generated_text, logits_array, generated_tokens = self.generate_with_logits(
+            input_text, max_new_tokens
+        )
         
-        for i in tqdm(range(0, len(texts), batch_size), desc="Extracting logits"):
-            batch_texts = texts[i:i+batch_size]
-            
-            for text in batch_texts:
-                logits, tokens = self.extract_logits(text, max_length)
-                results.append((logits, tokens))
+        # Calculate entropy for each token
+        entropies = self.calculate_token_entropy(logits_array)
         
-        return results
-    
-    def extract_answer_entropy(self, text: str, answer_start_marker: str = None, 
-                              max_length: int = 2048) -> Tuple[np.ndarray, List[str], int]:
-        """
-        Extract entropy specifically for the answer portion of text
-        
-        Args:
-            text: Full input text (question + answer)
-            answer_start_marker: Marker to identify where answer starts (e.g., "A:")
-            max_length: Maximum sequence length
-            
-        Returns:
-            Tuple of (entropy_array, tokens, answer_start_position)
-        """
-        # Get logits and tokens for full text
-        logits, tokens = self.extract_logits(text, max_length)
-        
-        # Calculate entropy for all positions
-        entropy = self.calculate_entropy(logits)
-        
-        # Find answer start position if marker provided
-        answer_start_pos = 0
-        if answer_start_marker:
-            # Convert full text to tokens to find marker position
-            for i, token in enumerate(tokens):
-                if answer_start_marker.lower() in token.lower():
-                    answer_start_pos = i
-                    break
-        
-        return entropy, tokens, answer_start_pos
+        return {
+            'generated_text': generated_text,
+            'tokens': generated_tokens,
+            'entropies': entropies,
+            'logits': logits_array,
+            'input_text': input_text
+        }
     
     def generate_answer(self, text: str, max_new_tokens: int = 512) -> str:
         """
-        Generate answer from the model for given input text
+        Simple text generation method (deprecated - use analyze_generation_uncertainty instead)
         
         Args:
             text: Input text (question)
@@ -231,31 +173,5 @@ class LogitsExtractor:
         Returns:
             Generated answer text
         """
-        try:
-            # Tokenize input
-            inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
-            input_ids = inputs['input_ids'].to(self.device)
-            attention_mask = inputs['attention_mask'].to(self.device)
-            
-            with torch.no_grad():
-                # Generate response
-                outputs = self.model.generate(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    temperature=0.7,
-                    top_p=0.9,
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id
-                )
-                
-                # Decode only the generated part
-                generated_tokens = outputs[0][len(input_ids[0]):]
-                generated_text = self.tokenizer.decode(generated_tokens, skip_special_tokens=True)
-                
-                return generated_text.strip()
-                
-        except Exception as e:
-            print(f"Error generating answer: {e}")
-            return ""
+        generated_text, _, _ = self.generate_with_logits(text, max_new_tokens)
+        return generated_text

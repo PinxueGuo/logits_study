@@ -106,17 +106,22 @@ class LogitsAnalyzer:
                 full_text = self.data_processor.create_full_text(item)
                 
                 try:
-                    logits, tokens = model.extract_logits(
+                    # 使用新的方法：一次前向传播获取生成文本和对应的logits
+                    result = model.analyze_generation_uncertainty(
                         full_text, 
-                        max_length=ANALYSIS_CONFIG['max_length']
+                        max_new_tokens=ANALYSIS_CONFIG['max_new_tokens']
                     )
                     
-                    # Generate answer from the model
-                    generated_answer = model.generate_answer(full_text)
+                    # 从结果中提取数据
+                    generated_text = result['generated_text']
+                    tokens = result['tokens']  # 这些是生成的token
+                    logits = result['logits']  # 对应每个生成token的logits
+                    entropies = result['entropies']  # 每个token的entropy
                     
                     # Store with metadata and generated answer
                     enhanced_metadata = item.copy()
-                    enhanced_metadata['generated_answer'] = generated_answer
+                    enhanced_metadata['generated_answer'] = generated_text
+                    enhanced_metadata['token_entropies'] = entropies
                     model_results.append((logits, tokens, enhanced_metadata))
                     
                 except Exception as e:
@@ -135,7 +140,8 @@ class LogitsAnalyzer:
     
     def calculate_token_entropy(self, logits: np.ndarray) -> np.ndarray:
         """
-        Calculate entropy for each token position
+        Calculate entropy for each token position (fallback method)
+        Note: This is now redundant as entropy is calculated in model_loader.py
         
         Args:
             logits: Logits array of shape (seq_len, vocab_size)
@@ -143,6 +149,9 @@ class LogitsAnalyzer:
         Returns:
             Array of entropy values for each position
         """
+        if logits.size == 0:
+            return np.array([])
+            
         # Convert to probabilities using softmax
         probs = torch.softmax(torch.from_numpy(logits), dim=-1).numpy()
         
@@ -167,6 +176,9 @@ class LogitsAnalyzer:
         """
         positions = {token: [] for token in target_tokens}
         
+        # Convert tokens to text for multi-token word detection
+        full_text = ''.join([token.replace('▁', ' ').replace('Ġ', ' ') for token in tokens]).lower()
+        
         for i, token in enumerate(tokens):
             # Clean token (remove special characters and decode properly)
             clean_token = token.strip()
@@ -180,11 +192,28 @@ class LogitsAnalyzer:
             # Convert to lowercase for comparison
             clean_token_lower = clean_token.lower()
             
+            # Direct token matching
             for target in target_tokens:
                 target_lower = target.lower()
                 # Exact match or contains match
                 if clean_token_lower == target_lower or target_lower in clean_token_lower:
-                    positions[target].append(i)
+                    if i not in positions[target]:  # Avoid duplicates
+                        positions[target].append(i)
+        
+        # Multi-token word detection
+        for target in target_tokens:
+            target_lower = target.lower()
+            if len(target_lower) > 1 and target_lower in full_text:
+                # Search for the target word in context around each token
+                for i, token in enumerate(tokens):
+                    # Check context around this token (previous 2 and next 2 tokens)
+                    context_start = max(0, i - 2)
+                    context_end = min(len(tokens), i + 3)
+                    context_tokens = tokens[context_start:context_end]
+                    context_text = ''.join([t.replace('▁', '').replace('Ġ', '') for t in context_tokens]).lower()
+                    
+                    if target_lower in context_text and i not in positions[target]:
+                        positions[target].append(i)
         
         return positions
 
@@ -229,8 +258,12 @@ class LogitsAnalyzer:
                     query_data['query_text'] = metadata.get('query', f'Query {query_idx}')
                     query_data['metadata'] = metadata
                 
-                # Calculate entropy for each token position
-                entropy_values = self.calculate_token_entropy(logits)
+                # 使用预计算的entropy或者从logits计算
+                if 'token_entropies' in metadata and len(metadata['token_entropies']) > 0:
+                    entropy_values = metadata['token_entropies']
+                else:
+                    # 如果没有预计算的entropy，则从logits计算
+                    entropy_values = self.calculate_token_entropy(logits)
                 
                 # Find target token positions
                 target_positions = self.find_target_token_positions_in_sequence(tokens, TARGET_TOKENS)
