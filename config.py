@@ -24,8 +24,7 @@ MODELS = {
 }
 
 # Target tokens to analyze - Chinese thinking words that may appear in math reasoning
-TARGET_TOKENS = ['等等', '等一下', '思考', '想想', '看看', '检查', '确认', '实际上', '然而', '所以', '因此', 
-                 'wait', 'aha', 'check', 'think', 'hmm', 'let', 'actually', 'however', 'so', 'therefore']
+TARGET_TOKENS = ['等等', '等一下', '检查', '确认', '我知道了', 'wait', 'aha', 'check']
 
 # Data configuration
 DATA_CONFIG = {
