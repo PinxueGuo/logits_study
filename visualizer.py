@@ -311,7 +311,7 @@ class LogitsVisualizer:
                 text=[[f'{val:.3f}' for val in row] for row in stats_data],
                 texttemplate="%{text}",
                 textfont={"size": 10, "family": self.font_family},
-                colorbar=dict(x=0.48, len=0.4)
+                showscale=False  # Remove color bar
             ),
             row=1, col=1
         )
@@ -349,11 +349,14 @@ class LogitsVisualizer:
         levels = sorted(set(query_data['metadata'].get('level', 'Unknown') 
                           for query_data in entropy_results['query_entropy_data']))
         
+        # Ensure all 5 levels are included (1-5)
+        all_levels = [1, 2, 3, 4, 5]
+        
         if len(levels) > 1 and 'Unknown' not in levels:
             level_means = []
             for model in models:
                 model_level_means = []
-                for level in levels:
+                for level in all_levels:  # Use all_levels instead of levels
                     if level in level_entropies[model] and level_entropies[model][level]:
                         model_level_means.append(np.mean(level_entropies[model][level]))
                     else:
@@ -363,13 +366,13 @@ class LogitsVisualizer:
             fig.add_trace(
                 go.Heatmap(
                     z=level_means,
-                    x=[f'Level {l}' for l in levels],
+                    x=[f'Level {l}' for l in all_levels],  # Use all_levels instead of levels
                     y=models,
                     colorscale='viridis',
                     text=[[f'{val:.3f}' for val in row] for row in level_means],
                     texttemplate="%{text}",
                     textfont={"size": 10, "family": self.font_family},
-                    colorbar=dict(x=0.48, y=0.25, len=0.4)
+                    showscale=False  # Remove color bar for this heatmap
                 ),
                 row=2, col=1
             )
