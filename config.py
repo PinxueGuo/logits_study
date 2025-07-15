@@ -28,7 +28,7 @@ TARGET_TOKENS = ['等等', '等一下', '检查', '确认', '我知道了', 'wai
 
 # Data configuration
 DATA_CONFIG = {
-    'input_file': 'data/logits_study_data_sample4.jsonl',  # Expected format: {'query': str, 'answer': str, 'level': int}
+    'input_file': 'data/logits_study_data_sample20.jsonl',  # Expected format: {'query': str, 'answer': str, 'level': int}
     'output_dir': 'results',
     'cache_dir': 'results/cache'
 }
