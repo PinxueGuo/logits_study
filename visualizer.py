@@ -249,16 +249,44 @@ class LogitsVisualizer:
         )
         
         # 1. Summary statistics heatmap
-        stats_labels = ['平均熵值', '标准差', '最小熵值', '最大熵值']
+        stats_labels = ['平均熵值', '标准差', '标记词平均熵值', '非标记词平均熵值']
         stats_data = []
         
+        # Calculate target and non-target token entropies for each model
         for model in models:
             stats = summary_stats[model]
+            
+            # Calculate target token and non-target token entropies
+            target_entropies = []
+            non_target_entropies = []
+            
+            for query_data in entropy_results['query_entropy_data']:
+                if model in query_data['models']:
+                    model_data = query_data['models'][model]
+                    entropy_values = model_data['entropy']
+                    target_positions = model_data['target_positions']
+                    
+                    # Get all target token positions
+                    all_target_positions = set()
+                    for positions in target_positions.values():
+                        all_target_positions.update(positions)
+                    
+                    # Separate target and non-target entropies
+                    for i, entropy in enumerate(entropy_values):
+                        if i in all_target_positions:
+                            target_entropies.append(entropy)
+                        else:
+                            non_target_entropies.append(entropy)
+            
+            # Calculate averages
+            target_avg = np.mean(target_entropies) if target_entropies else 0
+            non_target_avg = np.mean(non_target_entropies) if non_target_entropies else 0
+            
             stats_data.append([
                 stats['mean_entropy'],
                 stats['std_entropy'], 
-                stats['min_entropy'],
-                stats['max_entropy']
+                target_avg,
+                non_target_avg
             ])
         
         fig.add_trace(
