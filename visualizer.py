@@ -249,22 +249,25 @@ class LogitsVisualizer:
         )
         
         # 1. Summary statistics heatmap
-        stats_labels = ['平均熵值', '标准差', '标记词平均熵值', '非标记词平均熵值']
+        stats_labels = ['平均熵值', '标记词平均熵值', '非标记词平均熵值', '回答正确查询平均熵值', '回答错误查询平均熵值']
         stats_data = []
         
-        # Calculate target and non-target token entropies for each model
+        # Calculate target, non-target, correct and incorrect query entropies for each model
         for model in models:
             stats = summary_stats[model]
             
             # Calculate target token and non-target token entropies
             target_entropies = []
             non_target_entropies = []
+            correct_query_entropies = []
+            incorrect_query_entropies = []
             
             for query_data in entropy_results['query_entropy_data']:
                 if model in query_data['models']:
                     model_data = query_data['models'][model]
                     entropy_values = model_data['entropy']
                     target_positions = model_data['target_positions']
+                    is_correct = model_data.get('is_correct', False)
                     
                     # Get all target token positions
                     all_target_positions = set()
@@ -277,16 +280,26 @@ class LogitsVisualizer:
                             target_entropies.append(entropy)
                         else:
                             non_target_entropies.append(entropy)
+                    
+                    # Separate correct and incorrect query entropies
+                    query_avg_entropy = np.mean(entropy_values)
+                    if is_correct:
+                        correct_query_entropies.append(query_avg_entropy)
+                    else:
+                        incorrect_query_entropies.append(query_avg_entropy)
             
             # Calculate averages
             target_avg = np.mean(target_entropies) if target_entropies else 0
             non_target_avg = np.mean(non_target_entropies) if non_target_entropies else 0
+            correct_avg = np.mean(correct_query_entropies) if correct_query_entropies else 0
+            incorrect_avg = np.mean(incorrect_query_entropies) if incorrect_query_entropies else 0
             
             stats_data.append([
                 stats['mean_entropy'],
-                stats['std_entropy'], 
                 target_avg,
-                non_target_avg
+                non_target_avg,
+                correct_avg,
+                incorrect_avg
             ])
         
         fig.add_trace(

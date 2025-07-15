@@ -14,6 +14,7 @@ from config import MODELS, TARGET_TOKENS, DATA_CONFIG, ANALYSIS_CONFIG
 from model_loader import LogitsExtractor
 from data_processor import DataProcessor
 from visualizer import LogitsVisualizer
+from answer_comparator import extract_and_compare_answer
 
 class LogitsAnalyzer:
     def __init__(self):
@@ -286,12 +287,20 @@ class LogitsAnalyzer:
                     except:
                         decoded_tokens.append(token)
                 
+                # Check answer correctness if ground truth is available
+                generated_answer = metadata.get('generated_answer', '')
+                ground_truth = metadata.get('answer', '')
+                is_correct = False
+                if generated_answer and ground_truth:
+                    is_correct, extracted_answer, comparison_note = extract_and_compare_answer(generated_answer, ground_truth)
+                
                 query_data['models'][model_name] = {
                     'entropy': entropy_values,
                     'tokens': decoded_tokens,
                     'target_positions': target_positions,
                     'sequence_length': len(tokens),
-                    'generated_answer': metadata.get('generated_answer', '')  # Store generated answer
+                    'generated_answer': generated_answer,
+                    'is_correct': is_correct  # Add correctness information
                 }
                 
                 print(f"Query {query_idx}, Model {model_name}: {len(entropy_values)} positions, "
