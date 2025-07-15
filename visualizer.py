@@ -54,7 +54,7 @@ class LogitsVisualizer:
         query_idx = query_data['query_idx']
         query_text = query_data['query_text']
         models = list(query_data['models'].keys())
-        
+                
         if not models:
             return
         
@@ -66,6 +66,7 @@ class LogitsVisualizer:
         model_labels = []
         
         for model_name in models:
+            print(model_name)
             model_data = query_data['models'][model_name]
             entropy = model_data['entropy']
             seq_length = len(entropy)
@@ -77,7 +78,7 @@ class LogitsVisualizer:
                 normalized_positions = np.array([0.5])
             
             # Interpolate to fixed grid for visualization
-            grid_size = 100  # Fixed grid size for visualization
+            grid_size = 1000  # Fixed grid size for visualization
             grid_positions = np.linspace(0, 1, grid_size)
             
             if seq_length > 1:
@@ -91,24 +92,25 @@ class LogitsVisualizer:
         # Create the heatmap using plotly
         fig = go.Figure(data=go.Heatmap(
             z=heatmap_data,
-            x=np.linspace(0, 1, 100),
+            x=np.linspace(0, 1, 1000),
             y=model_labels,
             colorscale='viridis',
             colorbar=dict(
                 title=dict(
-                    text="熵值 (Entropy)",
+                    text="Entropy",
                     font=dict(family=self.font_family)
-                )
+                ),
+                # x=1.02  # Move colorbar to the right to avoid overlap
             )
         ))
         
         # Add target token markers
-        self._add_target_token_markers_plotly(fig, query_data, 100)
+        self._add_target_token_markers_plotly(fig, query_data, 1000)
         
         # Update layout with Chinese font support
         fig.update_layout(
             title=dict(
-                text=f'标记级熵值热图 - 查询 {query_idx}<br>{query_text[:100]}...',
+                text=f'查询 {query_idx}: {query_text[:30]}...',
                 font=dict(family=self.font_family)
             ),
             xaxis=dict(
@@ -127,7 +129,15 @@ class LogitsVisualizer:
             ),
             width=self.figsize[0],
             height=self.figsize[1],
-            font=dict(family=self.font_family)
+            font=dict(family=self.font_family),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.1,
+                xanchor="center",
+                x=0.5,
+                font=dict(family=self.font_family)
+            )
         )
         
         # Save both PNG and HTML
@@ -207,8 +217,8 @@ class LogitsVisualizer:
                             color=style['color'],
                             line=dict(width=2, color='white')
                         ),
-                        name=f'目标标记: {target_token}',
-                        showlegend=target_token not in [trace.name.split(': ')[1] for trace in fig.data if hasattr(trace, 'name') and trace.name and ': ' in trace.name],
+                        name=f'{target_token}',
+                        showlegend=target_token not in [trace.name for trace in fig.data if hasattr(trace, 'name') and trace.name],
                         legendgroup=target_token
                     ))
     
