@@ -2,24 +2,23 @@
 Visualization utilities for entropy analysis
 """
 
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Tuple
 import os
-from matplotlib.patches import Rectangle
-from matplotlib.colors import LinearSegmentedColormap
 
 class LogitsVisualizer:
-    def __init__(self, output_dir: str, figsize: Tuple[int, int] = (15, 8), dpi: int = 300):
+    def __init__(self, output_dir: str, figsize: Tuple[int, int] = (1200, 600), dpi: int = 300):
         """
         Initialize visualizer
         
         Args:
             output_dir: Directory to save plots
-            figsize: Figure size for matplotlib plots
-            dpi: DPI for saved plots
+            figsize: Figure size for plotly plots (width, height in pixels)
+            dpi: DPI for saved PNG plots
         """
         self.output_dir = output_dir
         self.figsize = figsize
@@ -27,9 +26,8 @@ class LogitsVisualizer:
         
         os.makedirs(output_dir, exist_ok=True)
         
-        # Set style
-        plt.style.use('default')
-        sns.set_palette("viridis")
+        # Define Chinese font family for all plots
+        self.font_family = "Microsoft YaHei, SimHei, Arial, sans-serif"
     
     def create_entropy_heatmaps(self, entropy_results: Dict[str, Any]):
         """
@@ -48,7 +46,7 @@ class LogitsVisualizer:
     
     def _create_single_query_heatmap(self, query_data: Dict[str, Any]):
         """
-        Create heatmap for a single query
+        Create heatmap for a single query using plotly
         
         Args:
             query_data: Query data containing entropy information for all models
@@ -90,58 +88,75 @@ class LogitsVisualizer:
             heatmap_data.append(interpolated_entropy)
             model_labels.append(model_name)
         
-        # Create the heatmap
-        fig, ax = plt.subplots(figsize=self.figsize, dpi=self.dpi)
+        # Create the heatmap using plotly
+        fig = go.Figure(data=go.Heatmap(
+            z=heatmap_data,
+            x=np.linspace(0, 1, 100),
+            y=model_labels,
+            colorscale='viridis',
+            colorbar=dict(
+                title=dict(
+                    text="熵值 (Entropy)",
+                    font=dict(family=self.font_family)
+                )
+            )
+        ))
         
-        # Convert to numpy array for plotting
-        heatmap_array = np.array(heatmap_data)
+        # Add target token markers
+        self._add_target_token_markers_plotly(fig, query_data, 100)
         
-        # Create heatmap
-        im = ax.imshow(heatmap_array, aspect='auto', cmap='viridis', 
-                      extent=[0, 1, len(models)-0.5, -0.5])
+        # Update layout with Chinese font support
+        fig.update_layout(
+            title=dict(
+                text=f'标记级熵值热图 - 查询 {query_idx}<br>{query_text[:100]}...',
+                font=dict(family=self.font_family)
+            ),
+            xaxis=dict(
+                title=dict(
+                    text="归一化标记位置 (0-1)",
+                    font=dict(family=self.font_family)
+                ),
+                tickfont=dict(family=self.font_family)
+            ),
+            yaxis=dict(
+                title=dict(
+                    text="模型",
+                    font=dict(family=self.font_family)
+                ),
+                tickfont=dict(family=self.font_family)
+            ),
+            width=self.figsize[0],
+            height=self.figsize[1],
+            font=dict(family=self.font_family)
+        )
         
-        # Set labels
-        ax.set_yticks(range(len(models)))
-        ax.set_yticklabels(model_labels)
-        ax.set_xlabel('Normalized Token Position (0-1)')
-        ax.set_ylabel('Models')
-        ax.set_title(f'Token-wise Entropy - Query {query_idx}\\n{query_text[:100]}...', 
-                    fontsize=12, pad=20)
+        # Save both PNG and HTML
+        filename_base = f"entropy_heatmap_query_{query_idx}"
+        png_path = os.path.join(self.output_dir, f"{filename_base}.png")
+        html_path = os.path.join(self.output_dir, f"{filename_base}.html")
         
-        # Adjust layout first to make room for both colorbar and legend
-        plt.subplots_adjust(right=0.65)
+        fig.write_image(png_path, width=self.figsize[0], height=self.figsize[1])
+        fig.write_html(html_path)
         
-        # Add colorbar with explicit positioning
-        cbar_ax = fig.add_axes([0.67, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
-        cbar = plt.colorbar(im, cax=cbar_ax)
-        cbar.set_label('Entropy', rotation=270, labelpad=15)
-        
-        # Mark target token positions
-        self._mark_target_tokens(ax, query_data, grid_size)
-        
-        # Save the plot
-        filename = f"entropy_heatmap_query_{query_idx}.png"
-        filepath = os.path.join(self.output_dir, filename)
-        plt.savefig(filepath, dpi=self.dpi, bbox_inches='tight')
-        plt.close()
-        
-        print(f"Saved entropy heatmap for query {query_idx}: {filename}")
+        print(f"Saved entropy heatmap for query {query_idx}: {filename_base}.png and {filename_base}.html")
     
-    def _mark_target_tokens(self, ax, query_data: Dict[str, Any], grid_size: int):
+    def _add_target_token_markers_plotly(self, fig, query_data: Dict[str, Any], grid_size: int):
         """
-        Mark target token positions on the heatmap
+        Add target token markers to plotly heatmap
         
         Args:
-            ax: Matplotlib axis
+            fig: Plotly figure
             query_data: Query data
             grid_size: Size of the interpolation grid
         """
         models = list(query_data['models'].keys())
         
         # Define different markers and colors for different target tokens
-        marker_styles = ['*', 'o', 's', '^', 'v', '<', '>', 'D', 'P', 'X', 'h', 'H', '+', 'x', 'd']
-        colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan',
-                 'magenta', 'yellow', 'navy', 'lime', 'maroon']
+        marker_symbols = ['star', 'circle', 'square', 'triangle-up', 'triangle-down', 
+                         'triangle-left', 'triangle-right', 'diamond', 'pentagon', 'cross', 
+                         'x', 'hexagon', 'hourglass', 'star-diamond', 'star-square']
+        colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 
+                 'olive', 'cyan', 'magenta', 'yellow', 'navy', 'lime', 'maroon']
         
         # Collect all unique target tokens that have positions
         all_target_tokens = set()
@@ -158,14 +173,11 @@ class LogitsVisualizer:
         token_style_map = {}
         for i, token in enumerate(all_target_tokens):
             token_style_map[token] = {
-                'marker': marker_styles[i % len(marker_styles)],
+                'symbol': marker_symbols[i % len(marker_symbols)],
                 'color': colors[i % len(colors)]
             }
         
-        # Mark positions for each model and target token
-        legend_handles = []
-        legend_labels = []
-        
+        # Add markers for each model and target token
         for model_idx, model_name in enumerate(models):
             model_data = query_data['models'][model_name]
             target_positions = model_data['target_positions']
@@ -185,40 +197,50 @@ class LogitsVisualizer:
                         normalized_pos = 0.5
                     
                     # Add marker
-                    marker_handle = ax.plot(normalized_pos, model_idx, style['marker'], 
-                                          markersize=10, color=style['color'],
-                                          markeredgecolor='white', markeredgewidth=1.5)[0]
-                    
-                    # Add to legend only once per target token
-                    if target_token not in legend_labels:
-                        legend_handles.append(marker_handle)
-                        legend_labels.append(target_token)
-        
-        # Add legend for target tokens (only if there are any)
-        if legend_handles:
-            ax.legend(legend_handles, legend_labels, loc='center left', 
-                     bbox_to_anchor=(1.05, 0.5), title="Target Tokens",
-                     frameon=True, fancybox=True, shadow=True)
+                    fig.add_trace(go.Scatter(
+                        x=[normalized_pos],
+                        y=[model_name],
+                        mode='markers',
+                        marker=dict(
+                            symbol=style['symbol'],
+                            size=12,
+                            color=style['color'],
+                            line=dict(width=2, color='white')
+                        ),
+                        name=f'目标标记: {target_token}',
+                        showlegend=target_token not in [trace.name.split(': ')[1] for trace in fig.data if hasattr(trace, 'name') and trace.name and ': ' in trace.name],
+                        legendgroup=target_token
+                    ))
     
     def _create_summary_heatmap(self, entropy_results: Dict[str, Any]):
         """
-        Create a summary heatmap showing average entropy statistics
+        Create a summary dashboard showing various entropy statistics using plotly
         
         Args:
             entropy_results: Complete entropy analysis results
         """
-        fig, axes = plt.subplots(2, 2, figsize=(16, 12), dpi=self.dpi)
-        
-        # Summary statistics heatmap
         summary_stats = entropy_results['summary_stats']
         models = list(summary_stats.keys())
         
         if not models:
             return
         
-        # Prepare data for summary statistics
+        # Create subplots with Chinese titles
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=[
+                '所有查询的汇总统计', 
+                '每查询平均熵值分布',
+                '难度等级平均熵值', 
+                '发现的目标标记总数'
+            ],
+            specs=[[{"secondary_y": False}, {"secondary_y": False}],
+                   [{"secondary_y": False}, {"secondary_y": False}]]
+        )
+        
+        # 1. Summary statistics heatmap
+        stats_labels = ['平均熵值', '标准差', '最小熵值', '最大熵值']
         stats_data = []
-        stats_labels = ['Mean Entropy', 'Std Entropy', 'Min Entropy', 'Max Entropy']
         
         for model in models:
             stats = summary_stats[model]
@@ -229,25 +251,21 @@ class LogitsVisualizer:
                 stats['max_entropy']
             ])
         
-        # Plot summary statistics
-        ax1 = axes[0, 0]
-        stats_array = np.array(stats_data)
-        im1 = ax1.imshow(stats_array, aspect='auto', cmap='viridis')
-        ax1.set_xticks(range(len(stats_labels)))
-        ax1.set_xticklabels(stats_labels, rotation=45, ha='right')
-        ax1.set_yticks(range(len(models)))
-        ax1.set_yticklabels(models)
-        ax1.set_title('Summary Statistics Across All Queries')
-        plt.colorbar(im1, ax=ax1)
+        fig.add_trace(
+            go.Heatmap(
+                z=stats_data,
+                x=stats_labels,
+                y=models,
+                colorscale='viridis',
+                text=[[f'{val:.3f}' for val in row] for row in stats_data],
+                texttemplate="%{text}",
+                textfont={"size": 10, "family": self.font_family},
+                colorbar=dict(x=0.48, len=0.4)
+            ),
+            row=1, col=1
+        )
         
-        # Add text annotations
-        for i in range(len(models)):
-            for j in range(len(stats_labels)):
-                text = ax1.text(j, i, f'{stats_array[i, j]:.3f}',
-                               ha="center", va="center", color="white", fontweight='bold')
-        
-        # Query-level average entropy comparison
-        ax2 = axes[0, 1]
+        # 2. Query-level average entropy box plot
         query_entropies = {model: [] for model in models}
         
         for query_data in entropy_results['query_entropy_data']:
@@ -255,20 +273,18 @@ class LogitsVisualizer:
                 avg_entropy = np.mean(model_data['entropy'])
                 query_entropies[model_name].append(avg_entropy)
         
-        # Box plot of query-level entropies
-        entropy_values = [query_entropies[model] for model in models]
-        box_plot = ax2.boxplot(entropy_values, labels=models, patch_artist=True)
-        ax2.set_title('Distribution of Average Entropy per Query')
-        ax2.set_ylabel('Average Entropy')
-        ax2.tick_params(axis='x', rotation=45)
+        for i, model in enumerate(models):
+            fig.add_trace(
+                go.Box(
+                    y=query_entropies[model],
+                    name=model,
+                    boxpoints='outliers',
+                    marker_color=px.colors.qualitative.Set1[i % len(px.colors.qualitative.Set1)]
+                ),
+                row=1, col=2
+            )
         
-        # Color the boxes
-        colors = plt.cm.viridis(np.linspace(0, 1, len(models)))
-        for patch, color in zip(box_plot['boxes'], colors):
-            patch.set_facecolor(color)
-        
-        # Level-wise analysis if available
-        ax3 = axes[1, 0]
+        # 3. Level-wise analysis
         level_entropies = {model: {} for model in models}
         
         for query_data in entropy_results['query_entropy_data']:
@@ -279,7 +295,6 @@ class LogitsVisualizer:
                 avg_entropy = np.mean(model_data['entropy'])
                 level_entropies[model_name][level].append(avg_entropy)
         
-        # Prepare level comparison data
         levels = sorted(set(query_data['metadata'].get('level', 'Unknown') 
                           for query_data in entropy_results['query_entropy_data']))
         
@@ -294,27 +309,30 @@ class LogitsVisualizer:
                         model_level_means.append(0)
                 level_means.append(model_level_means)
             
-            level_array = np.array(level_means)
-            im3 = ax3.imshow(level_array, aspect='auto', cmap='viridis')
-            ax3.set_xticks(range(len(levels)))
-            ax3.set_xticklabels([f'Level {l}' for l in levels])
-            ax3.set_yticks(range(len(models)))
-            ax3.set_yticklabels(models)
-            ax3.set_title('Average Entropy by Difficulty Level')
-            plt.colorbar(im3, ax=ax3)
-            
-            # Add text annotations
-            for i in range(len(models)):
-                for j in range(len(levels)):
-                    text = ax3.text(j, i, f'{level_array[i, j]:.3f}',
-                                   ha="center", va="center", color="white", fontweight='bold')
+            fig.add_trace(
+                go.Heatmap(
+                    z=level_means,
+                    x=[f'Level {l}' for l in levels],
+                    y=models,
+                    colorscale='viridis',
+                    text=[[f'{val:.3f}' for val in row] for row in level_means],
+                    texttemplate="%{text}",
+                    textfont={"size": 10, "family": self.font_family},
+                    colorbar=dict(x=0.48, y=0.25, len=0.4)
+                ),
+                row=2, col=1
+            )
         else:
-            ax3.text(0.5, 0.5, 'Level analysis not available\\n(insufficient level data)', 
-                    ha='center', va='center', transform=ax3.transAxes)
-            ax3.set_title('Level Analysis')
+            # Add placeholder text if level analysis not available
+            fig.add_annotation(
+                text="等级分析不可用<br>(等级数据不足)",
+                x=0.5, y=0.5,
+                xref="x3", yref="y3",
+                showarrow=False,
+                font=dict(size=16, family=self.font_family)
+            )
         
-        # Number of target tokens found per model
-        ax4 = axes[1, 1]
+        # 4. Number of target tokens found per model
         target_token_counts = {model: 0 for model in models}
         
         for query_data in entropy_results['query_entropy_data']:
@@ -322,24 +340,52 @@ class LogitsVisualizer:
                 count = sum(len(positions) for positions in model_data['target_positions'].values())
                 target_token_counts[model_name] += count
         
-        bars = ax4.bar(models, [target_token_counts[model] for model in models], 
-                      color=plt.cm.viridis(np.linspace(0, 1, len(models))))
-        ax4.set_title('Total Target Tokens Found')
-        ax4.set_ylabel('Count')
-        ax4.tick_params(axis='x', rotation=45)
+        fig.add_trace(
+            go.Bar(
+                x=models,
+                y=[target_token_counts[model] for model in models],
+                text=[str(target_token_counts[model]) for model in models],
+                textposition='auto',
+                marker_color=px.colors.qualitative.Set1[:len(models)],
+                textfont=dict(family=self.font_family)
+            ),
+            row=2, col=2
+        )
         
-        # Add value labels on bars
-        for bar in bars:
-            height = bar.get_height()
-            ax4.text(bar.get_x() + bar.get_width()/2., height,
-                    f'{int(height)}', ha='center', va='bottom')
+        # Update layout with Chinese font support
+        fig.update_layout(
+            title=dict(
+                text='熵值分析汇总报告',
+                font=dict(family=self.font_family, size=20)
+            ),
+            showlegend=False,
+            height=800,
+            width=1400,
+            font=dict(family=self.font_family)
+        )
         
-        plt.tight_layout()
+        # Update all subplot axes with Chinese fonts
+        fig.update_xaxes(tickfont=dict(family=self.font_family))
+        fig.update_yaxes(tickfont=dict(family=self.font_family))
         
-        # Save summary plot
-        filename = "entropy_analysis_summary.png"
-        filepath = os.path.join(self.output_dir, filename)
-        plt.savefig(filepath, dpi=self.dpi, bbox_inches='tight')
-        plt.close()
+        # Update specific axis titles
+        fig.update_xaxes(title_text="统计指标", row=1, col=1, title_font=dict(family=self.font_family))
+        fig.update_yaxes(title_text="模型", row=1, col=1, title_font=dict(family=self.font_family))
         
-        print(f"Saved entropy analysis summary: {filename}")
+        fig.update_yaxes(title_text="平均熵值", row=1, col=2, title_font=dict(family=self.font_family))
+        
+        fig.update_xaxes(title_text="难度等级", row=2, col=1, title_font=dict(family=self.font_family))
+        fig.update_yaxes(title_text="模型", row=2, col=1, title_font=dict(family=self.font_family))
+        
+        fig.update_xaxes(title_text="模型", row=2, col=2, title_font=dict(family=self.font_family))
+        fig.update_yaxes(title_text="目标标记数量", row=2, col=2, title_font=dict(family=self.font_family))
+        
+        # Save both PNG and HTML
+        filename_base = "entropy_analysis_summary"
+        png_path = os.path.join(self.output_dir, f"{filename_base}.png")
+        html_path = os.path.join(self.output_dir, f"{filename_base}.html")
+        
+        fig.write_image(png_path, width=1400, height=800)
+        fig.write_html(html_path)
+        
+        print(f"Saved entropy analysis summary: {filename_base}.png and {filename_base}.html")
