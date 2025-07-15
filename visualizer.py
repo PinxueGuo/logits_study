@@ -108,8 +108,12 @@ class LogitsVisualizer:
         ax.set_title(f'Token-wise Entropy - Query {query_idx}\\n{query_text[:100]}...', 
                     fontsize=12, pad=20)
         
-        # Add colorbar
-        cbar = plt.colorbar(im, ax=ax)
+        # Adjust layout first to make room for both colorbar and legend
+        plt.subplots_adjust(right=0.65)
+        
+        # Add colorbar with explicit positioning
+        cbar_ax = fig.add_axes([0.67, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+        cbar = plt.colorbar(im, cax=cbar_ax)
         cbar.set_label('Entropy', rotation=270, labelpad=15)
         
         # Mark target token positions
@@ -118,9 +122,6 @@ class LogitsVisualizer:
         # Save the plot
         filename = f"entropy_heatmap_query_{query_idx}.png"
         filepath = os.path.join(self.output_dir, filename)
-        plt.tight_layout()
-        # Add extra space for the legend
-        plt.subplots_adjust(right=0.75)
         plt.savefig(filepath, dpi=self.dpi, bbox_inches='tight')
         plt.close()
         
@@ -196,7 +197,7 @@ class LogitsVisualizer:
         # Add legend for target tokens (only if there are any)
         if legend_handles:
             ax.legend(legend_handles, legend_labels, loc='center left', 
-                     bbox_to_anchor=(1.0, 0.5), title="Target Tokens",
+                     bbox_to_anchor=(1.05, 0.5), title="Target Tokens",
                      frameon=True, fancybox=True, shadow=True)
     
     def _create_summary_heatmap(self, entropy_results: Dict[str, Any]):
